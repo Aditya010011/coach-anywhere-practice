@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/uw/ThemeToggle";
+
 
 export function UwLogo({ inverted = false }: { inverted?: boolean }) {
   return (
@@ -34,19 +36,24 @@ export function SiteHeader() {
           <a href="#modules" className="text-sm text-muted-foreground hover:text-foreground">
             Modules
           </a>
+          <Link to="/guidelines" className="text-sm text-muted-foreground hover:text-foreground">
+            Guidelines
+          </Link>
           <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground">
             FAQ
           </a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <ThemeToggle />
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-            <Link to="/dashboard">Sign in</Link>
+            <Link to="/login">Sign in</Link>
           </Button>
           <Button asChild size="sm" className="min-h-11 rounded-xl px-4">
-            <Link to="/dashboard">Start training</Link>
+            <Link to="/signup">Start training</Link>
           </Button>
         </div>
       </div>
     </header>
   );
 }
+
