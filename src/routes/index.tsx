@@ -5,12 +5,7 @@ import {
   TrendingUp,
   Star,
   Play,
-  Lock,
   Check,
-  Lightbulb,
-  Calculator,
-  PiggyBank,
-  Handshake,
   ArrowRight,
 } from "lucide-react";
 
@@ -25,6 +20,10 @@ import {
 } from "@/components/ui/accordion";
 import { SiteHeader, UwLogo } from "@/components/uw/SiteHeader";
 import { Waveform } from "@/components/uw/Waveform";
+import { VideoDemoDialog } from "@/components/uw/VideoDemoDialog";
+import { HeroStats } from "@/components/uw/HeroStats";
+import { ModulesExplorer } from "@/components/uw/ModulesExplorer";
+import { DialogTrigger } from "@/components/ui/dialog";
 import heroPartner from "@/assets/hero-partner.jpg";
 import aiOrb from "@/assets/ai-orb.jpg";
 
@@ -86,37 +85,6 @@ const steps = [
     n: "04",
     title: "Go live with confidence",
     body: "Have your first real conversation and unlock advanced training.",
-  },
-];
-
-const modules = [
-  {
-    icon: Lightbulb,
-    title: "Module 1: UW Basics",
-    preview: "Energy, broadband, mobile, insurance — how UW bundles simplify life.",
-    meta: "15 min video + 5 min AI practice",
-    locked: false,
-  },
-  {
-    icon: Calculator,
-    title: "Module 2: Commission & Earnings",
-    preview: "How the plan works, how bundles factor in, and realistic timelines.",
-    meta: "20 min",
-    locked: true,
-  },
-  {
-    icon: PiggyBank,
-    title: "Module 3: Bill Savings & Social Proof",
-    preview: "Show real customer savings and handle 'too expensive' objections.",
-    meta: "15 min + role-play",
-    locked: true,
-  },
-  {
-    icon: Handshake,
-    title: "Module 4: Your First Customer",
-    preview: "Step by step: finding leads, the conversation, closing, paperwork.",
-    meta: "30 min interactive",
-    locked: true,
   },
 ];
 
@@ -197,17 +165,18 @@ function Landing() {
                     <ArrowRight />
                   </Link>
                 </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="min-h-12 rounded-xl border-primary/40 px-6 text-base text-primary hover:bg-accent"
-                >
-                  <a href="#how">
-                    <Play />
-                    Watch how it works
-                  </a>
-                </Button>
+                <VideoDemoDialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="min-h-12 rounded-xl border-primary/40 px-6 text-base text-primary hover:bg-accent"
+                    >
+                      <Play />
+                      Watch how it works
+                    </Button>
+                  </DialogTrigger>
+                </VideoDemoDialog>
               </div>
               <ul className="mt-9 grid gap-3 sm:grid-cols-2">
                 {[
@@ -232,6 +201,7 @@ function Landing() {
                   <span className="font-semibold text-foreground">4.8 / 5</span> from Partner reviews
                 </span>
               </div>
+              <HeroStats />
             </div>
 
             {/* Hero visual */}
@@ -311,7 +281,7 @@ function Landing() {
 
         {/* Modules */}
         <section id="modules" className="border-y border-border bg-secondary/50 py-16 sm:py-24">
-          <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
               What you'll master
             </h2>
@@ -319,51 +289,7 @@ function Landing() {
               <Progress value={0} className="h-2" />
               <span className="shrink-0 text-sm text-muted-foreground">0% complete</span>
             </div>
-            <Accordion type="single" collapsible className="mt-8 space-y-3">
-              {modules.map(({ icon: Icon, title, preview, meta, locked }, i) => (
-                <AccordionItem
-                  key={title}
-                  value={`m${i}`}
-                  className="rounded-2xl border border-border bg-card px-5 shadow-card transition-shadow hover:shadow-lift"
-                >
-                  <AccordionTrigger className="py-5 hover:no-underline">
-                    <span className="flex min-w-0 items-center gap-3 text-left">
-                      <span
-                        className={
-                          locked
-                            ? "grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-locked"
-                            : "grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground"
-                        }
-                      >
-                        <Icon className="size-5" aria-hidden="true" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-base font-semibold">{title}</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">{meta}</span>
-                      </span>
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-5 text-sm leading-relaxed text-muted-foreground">
-                    {preview}
-                    <div className="mt-4">
-                      {locked ? (
-                        <Badge
-                          variant="secondary"
-                          className="rounded-full text-muted-foreground"
-                        >
-                          <Lock className="size-3" aria-hidden="true" />
-                          Sign in to unlock
-                        </Badge>
-                      ) : (
-                        <Button asChild size="sm" className="min-h-11 rounded-xl">
-                          <Link to="/dashboard">Start module</Link>
-                        </Button>
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+            <ModulesExplorer />
           </div>
         </section>
 

@@ -10,12 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as GuidelinesRouteImport } from './routes/guidelines'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TrainerRouteImport } from './routes/trainer'
+import { Route as TrainingIndexRouteImport } from './routes/training.index'
+import { Route as TrainingModuleIdRouteImport } from './routes/training.$moduleId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -23,40 +34,117 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuidelinesRoute = GuidelinesRouteImport.update({
+  id: '/guidelines',
+  path: '/guidelines',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TrainerRoute = TrainerRouteImport.update({
   id: '/trainer',
   path: '/trainer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrainingIndexRoute = TrainingIndexRouteImport.update({
+  id: '/training/',
+  path: '/training/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrainingModuleIdRoute = TrainingModuleIdRouteImport.update({
+  id: '/training/$moduleId',
+  path: '/training/$moduleId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/dashboard': typeof DashboardRoute
+  '/guidelines': typeof GuidelinesRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/trainer': typeof TrainerRoute
+  '/training/$moduleId': typeof TrainingModuleIdRoute
+  '/training/': typeof TrainingIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/dashboard': typeof DashboardRoute
+  '/guidelines': typeof GuidelinesRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/trainer': typeof TrainerRoute
+  '/training/$moduleId': typeof TrainingModuleIdRoute
+  '/training': typeof TrainingIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/dashboard': typeof DashboardRoute
+  '/guidelines': typeof GuidelinesRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/trainer': typeof TrainerRoute
+  '/training/$moduleId': typeof TrainingModuleIdRoute
+  '/training/': typeof TrainingIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/trainer'
+  fullPaths:
+    | '/'
+    | '/$'
+    | '/dashboard'
+    | '/guidelines'
+    | '/login'
+    | '/signup'
+    | '/trainer'
+    | '/training/$moduleId'
+    | '/training/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/trainer'
-  id: '__root__' | '/' | '/dashboard' | '/trainer'
+  to:
+    | '/'
+    | '/$'
+    | '/dashboard'
+    | '/guidelines'
+    | '/login'
+    | '/signup'
+    | '/trainer'
+    | '/training/$moduleId'
+    | '/training'
+  id:
+    | '__root__'
+    | '/'
+    | '/$'
+    | '/dashboard'
+    | '/guidelines'
+    | '/login'
+    | '/signup'
+    | '/trainer'
+    | '/training/$moduleId'
+    | '/training/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
   DashboardRoute: typeof DashboardRoute
+  GuidelinesRoute: typeof GuidelinesRoute
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
   TrainerRoute: typeof TrainerRoute
+  TrainingModuleIdRoute: typeof TrainingModuleIdRoute
+  TrainingIndexRoute: typeof TrainingIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,11 +156,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guidelines': {
+      id: '/guidelines'
+      path: '/guidelines'
+      fullPath: '/guidelines'
+      preLoaderRoute: typeof GuidelinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trainer': {
@@ -82,13 +198,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrainerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/training/': {
+      id: '/training/'
+      path: '/training'
+      fullPath: '/training/'
+      preLoaderRoute: typeof TrainingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/training/$moduleId': {
+      id: '/training/$moduleId'
+      path: '/training/$moduleId'
+      fullPath: '/training/$moduleId'
+      preLoaderRoute: typeof TrainingModuleIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
   DashboardRoute: DashboardRoute,
+  GuidelinesRoute: GuidelinesRoute,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
   TrainerRoute: TrainerRoute,
+  TrainingModuleIdRoute: TrainingModuleIdRoute,
+  TrainingIndexRoute: TrainingIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
