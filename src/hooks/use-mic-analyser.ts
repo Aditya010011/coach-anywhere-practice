@@ -54,7 +54,10 @@ export function useMicAnalyser() {
         if (a) {
           a.getByteFrequencyData(buf);
           let sum = 0;
-          for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+          for (let i = 0; i < buf.length; i++) {
+            const v = buf[i] ?? 0;
+            sum += v * v;
+          }
           setLevel(Math.min(1, Math.sqrt(sum / buf.length) / 90));
         }
         rafRef.current = requestAnimationFrame(tick);

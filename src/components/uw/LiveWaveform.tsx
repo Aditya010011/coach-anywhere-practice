@@ -62,7 +62,7 @@ export function LiveWaveform({
 
       const amp = (i: number) => {
         const raw = analyser
-          ? data[Math.floor((i / BAR_COUNT) * (data.length * 0.6))] / 255
+          ? (data[Math.floor((i / BAR_COUNT) * (data.length * 0.6))] ?? 0) / 255
           : (Math.sin(t + i * 0.4) * 0.5 + 0.5) * 0.55;
         return Math.min(1, Math.max(0.06, raw * sensRef.current));
       };
