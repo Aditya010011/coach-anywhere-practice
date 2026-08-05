@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -6,12 +6,19 @@ import {
   Mic,
   MicOff,
   Volume2,
-  PartyPopper,
   History,
   Star,
   Download,
   Share2,
   ChevronDown,
+  Play,
+  Pause,
+  CheckCircle2,
+  Circle,
+  Lightbulb,
+  RotateCw,
+  Radio,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,14 +31,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Waveform } from "@/components/uw/Waveform";
+import { Switch } from "@/components/ui/switch";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { LiveWaveform, type VizMode } from "@/components/uw/LiveWaveform";
+import { TranscriptPanel, type TranscriptMessage } from "@/components/uw/TranscriptPanel";
+import { SessionSummaryDialog } from "@/components/uw/SessionSummaryDialog";
+import { useMicAnalyser } from "@/hooks/use-mic-analyser";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { fireConfetti } from "@/lib/confetti";
 import { scenarios, practiceSessions } from "@/lib/uw-data";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/trainer")({
   head: () => ({
@@ -40,23 +58,56 @@ export const Route = createFileRoute("/trainer")({
       {
         name: "description",
         content:
-          "Tap, speak and practise real UW customer conversations with your voice AI coach. Objections, product Q&A, first call and closing scenarios.",
+          "Tap, speak and practise real UW customer conversations with your voice AI coach. Live mic visualisation, objectives and instant feedback.",
       },
       { property: "og:title", content: "Voice AI Trainer — Practise UW Conversations" },
       {
         property: "og:description",
         content: "Your 24/7 voice AI coach for objection handling and customer conversations.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Trainer,
 });
 
-const transcript = [
-  { who: "ai", text: "Hi Sarah! Let's practise objections. I'm a busy neighbour — go ahead." },
-  { who: "you", text: "Hi Jane! Quick question — who do you pay for broadband at the moment?" },
-  { who: "ai", text: "Honestly I'm quite busy right now, and I think switching is a hassle." },
-  { who: "you", text: "Totally fair. It takes about ten minutes and I handle the rest for you." },
+// TODO(vapi): replace this scripted exchange with live Vapi SDK events.
+const script: Omit<TranscriptMessage, "id">[] = [
+  {
+    who: "ai",
+    text: "Hi Sarah! Let's practise objections. I'm a busy neighbour — go ahead.",
+    at: "00:02",
+    reaction: "🤔",
+  },
+  {
+    who: "you",
+    text: "Hi Jane! Quick question — who do you pay for broadband at the moment?",
+    at: "00:11",
+  },
+  {
+    who: "ai",
+    text: "Honestly I'm quite busy right now, and I think switching is a hassle.",
+    at: "00:18",
+    reaction: "👍",
+  },
+  {
+    who: "you",
+    text: "Totally fair. It takes about ten minutes and I handle the rest for you.",
+    at: "00:27",
+  },
+  {
+    who: "ai",
+    text: "Great acknowledgement before answering — that keeps people listening. Try quantifying the saving next.",
+    at: "00:34",
+    keyTip: true,
+    reaction: "🎉",
+  },
+  {
+    who: "you",
+    text: "Most households on a bundle see a single simpler bill each month.",
+    at: "00:44",
+  },
 ];
 
 const focusAreas = [
@@ -67,11 +118,30 @@ const focusAreas = [
   "Answering technical questions",
 ];
 
+const scenarioTips: Record<string, string[]> = {
+  default: [
+    "Listen fully before you respond.",
+    "Acknowledge the concern in their own words.",
+    "Ask one question at a time.",
+    "Never promise specific income or savings.",
+    "Close with a clear next step.",
+  ],
+};
+
+const scenarioPreview = [
+  { who: "ai", text: "I'm happy with my current supplier, thanks." },
+  { who: "you", text: "Makes sense — what do you like most about them?" },
+  { who: "ai", text: "It's just easy, I don't want the hassle of switching." },
+  { who: "you", text: "That's exactly why people bundle — one bill, one login." },
+];
+
 const levelStyles = {
   beginner: "border-success text-success data-[state=checked]:bg-success/15",
   intermediate: "border-warning text-warning data-[state=checked]:bg-warning/15",
   advanced: "border-destructive text-destructive data-[state=checked]:bg-destructive/15",
 } as const;
+
+const SPEEDS = [0.75, 1, 1.25, 1.5];
 
 function formatTime(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -79,12 +149,15 @@ function formatTime(s: number) {
 
 function Trainer() {
   const [active, setActive] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState([70]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const lastDuration = useRef(0);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const isMobile = useIsMobile();
 
   // Pre-session config
   const [scenario, setScenario] = useState("objections");
@@ -92,18 +165,172 @@ function Trainer() {
   const [goalMinutes, setGoalMinutes] = useState([15]);
   const [focus, setFocus] = useState<string[]>([]);
 
+  // Audio
+  const mic = useMicAnalyser();
+  const [vizMode, setVizMode] = useState<VizMode>("bars");
+  const [sensitivity, setSensitivity] = useState([1]);
+  const [speed, setSpeed] = useState(1);
+  const [pushToTalk, setPushToTalk] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const [noiseSuppression, setNoiseSuppression] = useState(true);
+  const [echoCancellation, setEchoCancellation] = useState(true);
+
+  // Conversation
+  const [messages, setMessages] = useState<TranscriptMessage[]>([]);
+  const [typing, setTyping] = useState(false);
+  const [aiSpeaking, setAiSpeaking] = useState(false);
+  const [silence, setSilence] = useState(0);
+  const [hintDismissed, setHintDismissed] = useState(false);
+  const [done, setDone] = useState<string[]>([]);
+  const [goalCelebrated, setGoalCelebrated] = useState(false);
+
+  const speaking = !muted && (pushToTalk ? holding : mic.level > 0.12);
+
+  // Preferences
   useEffect(() => {
-    if (!active) return;
+    try {
+      const raw = localStorage.getItem("uw-trainer-prefs");
+      if (!raw) return;
+      const p = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof p["speed"] === "number") setSpeed(p["speed"]);
+      if (typeof p["vizMode"] === "string") setVizMode(p["vizMode"] as VizMode);
+      if (typeof p["sensitivity"] === "number") setSensitivity([p["sensitivity"]]);
+      if (typeof p["pushToTalk"] === "boolean") setPushToTalk(p["pushToTalk"]);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "uw-trainer-prefs",
+        JSON.stringify({ speed, vizMode, sensitivity: sensitivity[0], pushToTalk }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [speed, vizMode, sensitivity, pushToTalk]);
+
+  // Session timer
+  useEffect(() => {
+    if (!active || paused) return;
     const id = window.setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => window.clearInterval(id);
+  }, [active, paused]);
+
+  // Silence tracking
+  useEffect(() => {
+    if (!active || paused) return;
+    if (speaking) {
+      setSilence(0);
+      return;
+    }
+    const id = window.setInterval(() => setSilence((s) => s + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [active, paused, speaking]);
+
+  // Scripted conversation
+  useEffect(() => {
+    if (!active || paused) return;
+    if (messages.length >= script.length) return;
+    const next = script[messages.length]!;
+    const delay = 5200 / speed;
+    let typeId = 0;
+    const id = window.setTimeout(() => {
+      if (next.who === "ai") {
+        setTyping(true);
+        typeId = window.setTimeout(() => {
+          setTyping(false);
+          setAiSpeaking(true);
+          if (navigator.vibrate) navigator.vibrate(40);
+          setMessages((m) => [...m, { ...next, id: `m${m.length}` }]);
+          window.setTimeout(() => setAiSpeaking(false), 2600);
+          if (next.keyTip) fireConfetti(1200);
+        }, 1100);
+      } else {
+        setMessages((m) => [...m, { ...next, id: `m${m.length}` }]);
+      }
+    }, delay);
+    return () => {
+      window.clearTimeout(id);
+      window.clearTimeout(typeId);
+    };
+  }, [active, paused, messages.length, speed]);
+
+  // Objectives auto-check
+  const objectives = focus.length ? focus : ["Overcoming objections", "Explaining bundles"];
+  useEffect(() => {
+    const reached = Math.min(objectives.length, Math.floor(messages.length / 2));
+    const next = objectives.slice(0, reached);
+    if (next.length > done.length) {
+      const justDone = next[next.length - 1]!;
+      setDone(next);
+      toast.success(`Objective complete — ${justDone}`);
+    }
+  }, [messages.length, objectives, done.length]);
+
+  // Goal progress
+  const goalSeconds = (goalMinutes[0] ?? 15) * 60;
+  const progress = Math.min(100, (seconds / goalSeconds) * 100);
+  useEffect(() => {
+    if (active && !goalCelebrated && seconds >= goalSeconds) {
+      setGoalCelebrated(true);
+      fireConfetti();
+      toast.success("Practice goal reached! 🎉");
+    }
+  }, [active, seconds, goalSeconds, goalCelebrated]);
+
+  // Wake lock
+  useEffect(() => {
+    if (!active) return;
+    let lock: { release: () => Promise<void> } | null = null;
+    const nav = navigator as Navigator & {
+      wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> };
+    };
+    void nav.wakeLock
+      ?.request("screen")
+      .then((l) => {
+        lock = l;
+      })
+      .catch(() => {});
+    return () => {
+      void lock?.release().catch(() => {});
+    };
   }, [active]);
 
-  function endSession() {
+  const endSession = useCallback(() => {
     lastDuration.current = seconds;
     setActive(false);
+    setPaused(false);
     setSeconds(0);
+    setMessages([]);
+    setDone([]);
+    setGoalCelebrated(false);
     setSummaryOpen(true);
-  }
+  }, [seconds]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const typingInField =
+        target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (!active || typingInField) return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        setMuted((m) => !m);
+      } else if (e.key === "Escape") {
+        endSession();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, endSession]);
 
   function toggleFocus(area: string) {
     setFocus((f) => {
@@ -113,6 +340,24 @@ function Trainer() {
     });
   }
 
+  async function startSession() {
+    if (mic.status === "idle") await mic.request();
+    setActive(true);
+    setPaused(false);
+    setMessages([]);
+    setSilence(0);
+    setHintDismissed(false);
+  }
+
+  const voiceState = aiSpeaking ? "ai" : speaking ? "user" : "idle";
+  const statusLabel = aiSpeaking
+    ? "Coach speaking…"
+    : speaking
+      ? "You're speaking"
+      : pushToTalk
+        ? "Hold to speak"
+        : "Listening…";
+
   return (
     <div className="flex min-h-dvh flex-col bg-gradient-night text-primary-foreground">
       <header className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 px-4 py-4 sm:px-6">
@@ -120,20 +365,20 @@ function Trainer() {
           asChild
           variant="ghost"
           size="sm"
-          className="min-h-11 text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+          className="min-h-12 text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
         >
           <Link to="/dashboard">
             <ArrowLeft />
             <span className="hidden sm:inline">Dashboard</span>
           </Link>
         </Button>
-        <p className="text-center font-mono text-sm text-primary-foreground/80" aria-live="off">
+        <p className="text-center font-mono text-sm text-primary-foreground/80">
           {formatTime(seconds)}
         </p>
         <Button
           variant="ghost"
           size="sm"
-          className="min-h-11 text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+          className="min-h-12 text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
           onClick={() => setHistoryOpen(true)}
         >
           <History />
@@ -145,20 +390,20 @@ function Trainer() {
           aria-label="End session"
           onClick={endSession}
           disabled={!active}
-          className="min-h-11 min-w-11 text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+          className="min-h-12 min-w-12 text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
         >
           <X />
         </Button>
       </header>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center px-4 pb-6 sm:px-6">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center px-4 pb-6 sm:px-6">
         {!active ? (
-          <div className="flex flex-1 flex-col items-center py-6 text-center">
+          <div className="flex w-full flex-1 flex-col items-center py-6 text-center">
             <button
               type="button"
-              onClick={() => setActive(true)}
+              onClick={() => void startSession()}
               aria-label="Start practice session"
-              className="relative grid size-40 place-items-center rounded-full bg-gradient-brand shadow-lift transition-transform duration-100 active:scale-[0.98] sm:size-48"
+              className="relative grid size-40 place-items-center rounded-full bg-gradient-brand shadow-lift transition-transform duration-200 active:scale-[0.98] sm:size-48"
             >
               <span className="absolute inset-0 animate-pulse-ring rounded-full bg-primary/40" />
               <Mic className="relative size-14 text-primary-foreground" aria-hidden="true" />
@@ -168,14 +413,99 @@ function Trainer() {
               No question is too small. Your coach is ready whenever you are.
             </p>
 
-            {/* Pre-session configuration */}
+            {/* Warm-up: microphone */}
             <div className="mt-8 w-full rounded-2xl bg-card/50 p-6 text-left text-foreground backdrop-blur">
+              <h2 className="text-sm font-semibold">Mic check</h2>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <Button
+                  variant="secondary"
+                  className="min-h-12 rounded-xl"
+                  onClick={() => void mic.request()}
+                  disabled={mic.status === "requesting"}
+                >
+                  <Mic className="size-4" />
+                  {mic.status === "requesting" ? "Requesting…" : "Request microphone"}
+                </Button>
+                <span
+                  className={cn(
+                    "text-sm font-medium",
+                    mic.status === "ready" && "text-success",
+                    mic.status === "denied" && "text-destructive",
+                    mic.status !== "ready" && mic.status !== "denied" && "text-muted-foreground",
+                  )}
+                  role="status"
+                >
+                  {mic.status === "ready"
+                    ? "Microphone ready ✓"
+                    : mic.status === "denied"
+                      ? "Access denied ⚠️"
+                      : mic.status === "requesting"
+                        ? "Waiting for permission…"
+                        : "Microphone not connected"}
+                </span>
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Say something to test your mic — the bars should move.
+              </p>
+              <LiveWaveform
+                analyser={mic.analyserRef.current}
+                mode={vizMode}
+                sensitivity={sensitivity[0] ?? 1}
+                state={mic.level > 0.12 ? "user" : "idle"}
+                className="mt-2 h-16"
+              />
+              {mic.status === "ready" && mic.level > 0.12 && (
+                <p className="text-xs font-medium text-success">Mic working ✓</p>
+              )}
+            </div>
+
+            {/* Scenario preview */}
+            <div className="mt-4 w-full rounded-2xl bg-card/50 p-6 text-left text-foreground backdrop-blur">
+              <h2 className="text-sm font-semibold">What this scenario sounds like</h2>
+              <div className="mt-3 space-y-2">
+                {scenarioPreview.map((m, i) => (
+                  <p
+                    key={i}
+                    className={cn(
+                      "max-w-[90%] rounded-2xl px-3 py-2 text-sm",
+                      m.who === "you"
+                        ? "ml-auto rounded-br-sm bg-muted"
+                        : "rounded-bl-sm bg-gradient-brand text-primary-foreground",
+                    )}
+                  >
+                    {m.text}
+                  </p>
+                ))}
+              </div>
+              <Button className="mt-4 min-h-12 w-full rounded-xl" onClick={() => void startSession()}>
+                Got it, let&apos;s start
+              </Button>
+            </div>
+
+            {/* Quick tips */}
+            <Collapsible className="mt-4 w-full rounded-2xl bg-card/50 p-6 text-left text-foreground backdrop-blur">
+              <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between text-sm font-semibold">
+                Quick tips for this scenario
+                <ChevronDown className="size-4" aria-hidden="true" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-2">
+                {scenarioTips["default"]!.map((t) => (
+                  <p key={t} className="flex gap-2 text-sm text-muted-foreground">
+                    <Lightbulb className="mt-0.5 size-4 shrink-0 text-gold" aria-hidden="true" />
+                    {t}
+                  </p>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Pre-session configuration */}
+            <div className="mt-4 w-full rounded-2xl bg-card/50 p-6 text-left text-foreground backdrop-blur">
               <h2 className="text-sm font-semibold">Session setup</h2>
 
               <div className="mt-4 space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Scenario</label>
                 <Select value={scenario} onValueChange={setScenario}>
-                  <SelectTrigger aria-label="Practice scenario" className="min-h-11">
+                  <SelectTrigger aria-label="Practice scenario" className="min-h-12">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -205,8 +535,11 @@ function Trainer() {
                   ).map(([value, label]) => (
                     <label
                       key={value}
-                      className={`flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors ${levelStyles[value]} ${level === value ? "" : "bg-transparent"}`}
-                      style={level === value ? undefined : { backgroundColor: "transparent" }}
+                      className={cn(
+                        "flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-colors",
+                        levelStyles[value],
+                        level !== value && "bg-transparent",
+                      )}
                       data-state={level === value ? "checked" : "unchecked"}
                     >
                       <RadioGroupItem value={value} className="sr-only" />
@@ -242,7 +575,10 @@ function Trainer() {
                     return (
                       <label
                         key={area}
-                        className={`flex min-h-11 items-center gap-3 rounded-xl border border-border px-3 ${disabled ? "opacity-50" : "cursor-pointer hover:bg-accent"}`}
+                        className={cn(
+                          "flex min-h-12 items-center gap-3 rounded-xl border border-border px-3",
+                          disabled ? "opacity-50" : "cursor-pointer hover:bg-accent",
+                        )}
                       >
                         <Checkbox
                           checked={checked}
@@ -260,56 +596,161 @@ function Trainer() {
               </div>
 
               <Button
-                onClick={() => setActive(true)}
+                onClick={() => void startSession()}
                 disabled={focus.length === 0}
-                className={`mt-6 min-h-12 w-full rounded-xl text-base ${focus.length > 0 ? "relative animate-pulse-ring" : ""}`}
+                className={cn(
+                  "mt-6 min-h-12 w-full rounded-xl text-base",
+                  focus.length > 0 && "relative animate-pulse-ring",
+                )}
               >
                 Start practice session
               </Button>
             </div>
           </div>
         ) : (
-          <div className="flex w-full flex-1 flex-col">
-            <Waveform className="my-10 h-28 sm:h-36" />
-            <div
-              className="flex-1 space-y-3 overflow-y-auto"
-              aria-live="polite"
-              aria-label="Live transcript"
-            >
-              {transcript.map((m, i) =>
-                m.who === "you" ? (
-                  <p
-                    key={i}
-                    className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-primary-foreground/12 px-4 py-3 text-sm"
-                  >
-                    {m.text}
-                  </p>
-                ) : (
-                  <p
-                    key={i}
-                    className="max-w-[88%] rounded-2xl rounded-bl-sm bg-gradient-brand px-4 py-3 text-sm shadow-lift"
-                  >
-                    {m.text}
-                  </p>
-                ),
+          <div className="flex w-full flex-1 flex-col gap-4 landscape:flex-row landscape:items-start">
+            <div className="landscape:w-1/2">
+              {isMobile && (
+                <p className="mb-2 text-center text-xs text-primary-foreground/60 portrait:block landscape:hidden">
+                  Rotate to landscape for a bigger transcript
+                </p>
               )}
+              <div className="relative my-4">
+                <div
+                  className={cn(
+                    "rounded-3xl p-2 transition-all",
+                    speaking && "animate-pulse-ring ring-2 ring-success/60",
+                    aiSpeaking && "ring-2 ring-warning/60",
+                  )}
+                >
+                  <LiveWaveform
+                    analyser={mic.analyserRef.current}
+                    mode={vizMode}
+                    state={voiceState}
+                    sensitivity={sensitivity[0] ?? 1}
+                    className="h-28 sm:h-36"
+                  />
+                </div>
+                <p className="mt-2 text-center text-sm font-medium text-primary-foreground/85" role="status">
+                  {statusLabel}
+                </p>
+                {!speaking && !aiSpeaking && silence >= 2 && silence < 5 && (
+                  <p className="mt-1 text-center text-xs text-primary-foreground/60">
+                    Waiting for response…
+                  </p>
+                )}
+                {!speaking && silence >= 5 && !hintDismissed && (
+                  <div className="mx-auto mt-3 flex max-w-sm items-start gap-2 rounded-xl border border-gold/40 bg-primary-foreground/10 p-3 text-left text-xs">
+                    <Lightbulb className="mt-0.5 size-4 shrink-0 text-gold" aria-hidden="true" />
+                    <p className="flex-1">
+                      {silence >= 10
+                        ? "Try asking: “What's your biggest concern?” — acknowledge the objection first."
+                        : "Try asking about objections."}
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Dismiss hint"
+                      onClick={() => setHintDismissed(true)}
+                      className="rounded p-1 hover:bg-primary-foreground/15"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                )}
+                {silence >= 30 && (
+                  <div className="mt-3 text-center">
+                    <Button asChild variant="secondary" size="sm" className="min-h-11 rounded-xl">
+                      <Link to="/guidelines">Need help? View guidelines</Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Goal progress */}
+              <div className="mt-2">
+                <div className="flex items-center justify-between text-xs text-primary-foreground/75">
+                  <span>
+                    {Math.floor(seconds / 60)} min / {goalMinutes[0]} min goal
+                  </span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <div
+                  className="mt-1 h-2 w-full overflow-hidden rounded-full bg-primary-foreground/15"
+                  role="progressbar"
+                  aria-valuenow={Math.round(progress)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Practice goal progress"
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      progress < 40 ? "bg-success" : progress < 80 ? "bg-warning" : "bg-gradient-brand",
+                    )}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Objectives */}
+              <Collapsible defaultOpen className="mt-4 rounded-2xl border border-primary-foreground/15 bg-primary-foreground/8 p-4">
+                <CollapsibleTrigger className="flex min-h-11 w-full items-center justify-between text-sm font-semibold">
+                  Live objectives
+                  <ChevronDown className="size-4" aria-hidden="true" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-2">
+                  {objectives.map((o) => {
+                    const complete = done.includes(o);
+                    return (
+                      <p key={o} className="flex items-center gap-2 text-sm">
+                        {complete ? (
+                          <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
+                        ) : (
+                          <Circle className="size-4 opacity-50" aria-hidden="true" />
+                        )}
+                        <span className={cn(complete && "line-through opacity-70")}>{o}</span>
+                      </p>
+                    );
+                  })}
+                </CollapsibleContent>
+              </Collapsible>
             </div>
+
+            <TranscriptPanel
+              messages={messages}
+              typing={typing}
+              searchRef={searchRef}
+              className="min-h-64 flex-1 landscape:h-[60dvh]"
+            />
           </div>
         )}
 
         {/* Bottom toolbar */}
         {active && (
-          <div className="mt-8 w-full rounded-2xl border border-primary-foreground/15 bg-primary-foreground/8 p-4 backdrop-blur">
+          <div className="mt-6 w-full rounded-2xl border border-primary-foreground/15 bg-primary-foreground/8 p-4 backdrop-blur">
             <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-              <Button
-                variant="ghost"
-                onClick={() => setMuted((m) => !m)}
-                aria-pressed={muted}
-                className="min-h-11 justify-start text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-              >
-                {muted ? <MicOff /> : <Mic />}
-                {muted ? "Unmute" : "Mute"}
-              </Button>
+              {pushToTalk ? (
+                <Button
+                  variant="secondary"
+                  className="min-h-12 justify-start rounded-xl"
+                  onPointerDown={() => setHolding(true)}
+                  onPointerUp={() => setHolding(false)}
+                  onPointerLeave={() => setHolding(false)}
+                  aria-pressed={holding}
+                >
+                  <Mic /> {holding ? "Release to send" : "Hold to talk"}
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  onClick={() => setMuted((m) => !m)}
+                  aria-pressed={muted}
+                  className="min-h-12 justify-start text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                >
+                  {muted ? <MicOff /> : <Mic />}
+                  {muted ? "Unmute" : "Mute"}
+                </Button>
+              )}
               <div className="flex min-w-0 items-center gap-3">
                 <Volume2 className="size-4 shrink-0 text-primary-foreground/70" aria-hidden="true" />
                 <Slider
@@ -321,64 +762,161 @@ function Trainer() {
                   className="min-w-0 flex-1"
                 />
               </div>
-              <Select value={scenario} onValueChange={setScenario}>
-                <SelectTrigger
-                  aria-label="Practice scenario"
-                  className="min-h-11 border-primary-foreground/25 bg-transparent text-primary-foreground"
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  className="min-h-12 text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                  onClick={() => {
+                    setPaused((p) => !p);
+                    toast(paused ? "Session resumed" : "Session paused");
+                  }}
+                  aria-pressed={paused}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {scenarios.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  {paused ? <Play /> : <Pause />}
+                  {paused ? "Resume" : "Pause"}
+                </Button>
+                <Select value={scenario} onValueChange={setScenario}>
+                  <SelectTrigger
+                    aria-label="Practice scenario"
+                    className="min-h-12 border-primary-foreground/25 bg-transparent text-primary-foreground"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {scenarios.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            <div className="mt-4 grid gap-4 border-t border-primary-foreground/15 pt-4 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-primary-foreground/70">Playback speed</p>
+                <div className="mt-2 flex gap-2">
+                  {SPEEDS.map((s) => (
+                    <Button
+                      key={s}
+                      size="sm"
+                      variant={speed === s ? "secondary" : "ghost"}
+                      className={cn(
+                        "min-h-11 flex-1 rounded-xl",
+                        speed === s
+                          ? "text-secondary-foreground"
+                          : "text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground",
+                      )}
+                      onClick={() => {
+                        setSpeed(s);
+                        toast(`Playback speed ${s}x`);
+                      }}
+                      aria-pressed={speed === s}
+                    >
+                      {s}x
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-primary-foreground/70">Visualisation</p>
+                <Tabs value={vizMode} onValueChange={(v) => setVizMode(v as VizMode)} className="mt-2">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="bars" className="flex-1">
+                      Bars
+                    </TabsTrigger>
+                    <TabsTrigger value="circle" className="flex-1">
+                      Circle
+                    </TabsTrigger>
+                    <TabsTrigger value="frequency" className="flex-1">
+                      Frequency
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-primary-foreground/70">
+                  Visualiser sensitivity
+                </p>
+                <Slider
+                  value={sensitivity}
+                  onValueChange={setSensitivity}
+                  min={0.5}
+                  max={2}
+                  step={0.5}
+                  aria-label="Visualiser sensitivity"
+                  className="mt-3"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-2">
+                    <Radio className="size-4 opacity-70" aria-hidden="true" />
+                    Push-to-talk mode
+                  </span>
+                  <Switch
+                    checked={pushToTalk}
+                    onCheckedChange={setPushToTalk}
+                    aria-label="Push to talk mode"
+                  />
+                </label>
+                <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="size-4 opacity-70" aria-hidden="true" />
+                    Noise suppression
+                  </span>
+                  <Switch
+                    checked={noiseSuppression}
+                    onCheckedChange={(v) => {
+                      setNoiseSuppression(v);
+                      toast(v ? "Noise suppression on" : "Noise suppression off");
+                    }}
+                    aria-label="Noise suppression"
+                  />
+                </label>
+                <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-2">
+                    <RotateCw className="size-4 opacity-70" aria-hidden="true" />
+                    Echo cancellation
+                  </span>
+                  <Switch
+                    checked={echoCancellation}
+                    onCheckedChange={(v) => {
+                      setEchoCancellation(v);
+                      toast(v ? "Echo cancellation on" : "Echo cancellation off");
+                    }}
+                    aria-label="Echo cancellation"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <p className="mt-4 text-center text-[11px] text-primary-foreground/55">
+              Shortcuts: Space mute · Esc end session · ⌘/Ctrl + K search transcript
+            </p>
           </div>
         )}
       </main>
 
-      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <PartyPopper className="size-5 text-gold" aria-hidden="true" />
-              Session complete
-            </DialogTitle>
-          </DialogHeader>
-          <dl className="space-y-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Duration</dt>
-              <dd className="font-semibold">{formatTime(lastDuration.current)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Topics covered</dt>
-              <dd className="text-right font-semibold">Bundle savings, objection handling</dd>
-            </div>
-          </dl>
-          <p className="rounded-xl bg-accent p-4 text-sm leading-relaxed text-accent-foreground">
-            You handled the “too expensive” objection well. Next time, pause a little longer between
-            points so your prospect can respond.
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              className="min-h-11 flex-1 rounded-xl"
-              onClick={() => {
-                setSummaryOpen(false);
-                setActive(true);
-              }}
-            >
-              Practise again
-            </Button>
-            <Button asChild variant="outline" className="min-h-11 flex-1 rounded-xl">
-              <Link to="/dashboard">Back to dashboard</Link>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SessionSummaryDialog
+        open={summaryOpen}
+        onOpenChange={setSummaryOpen}
+        metrics={{
+          durationLabel: formatTime(lastDuration.current),
+          speakingPct: 46,
+          turns: 6,
+          avgResponse: "2.4s",
+          wpm: 132,
+        }}
+        onPractiseAgain={() => {
+          setSummaryOpen(false);
+          void startSession();
+        }}
+      />
 
       <HistorySheet open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
@@ -455,7 +993,7 @@ function HistorySheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-3 min-h-9 w-full rounded-xl"
+                  className="mt-3 min-h-11 w-full rounded-xl"
                   onClick={() => setExpanded(isOpen ? null : s.id)}
                 >
                   {isOpen ? "Collapse" : "Review transcript"}
@@ -495,7 +1033,7 @@ function HistorySheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
                       <Button
                         size="sm"
                         variant="outline"
-                        className="min-h-9 flex-1 rounded-xl"
+                        className="min-h-11 flex-1 rounded-xl"
                         onClick={() => toast.success("Download ready!")}
                       >
                         <Download className="size-4" />
@@ -504,7 +1042,7 @@ function HistorySheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
                       <Button
                         size="sm"
                         variant="outline"
-                        className="min-h-9 flex-1 rounded-xl"
+                        className="min-h-11 flex-1 rounded-xl"
                         onClick={() => toast("Shared with mentor")}
                       >
                         <Share2 className="size-4" />
