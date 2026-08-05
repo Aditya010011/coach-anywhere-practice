@@ -37,7 +37,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
 import {
   Collapsible,
   CollapsibleContent,
@@ -193,10 +192,10 @@ function Trainer() {
       const raw = localStorage.getItem("uw-trainer-prefs");
       if (!raw) return;
       const p = JSON.parse(raw) as Record<string, unknown>;
-      if (typeof p.speed === "number") setSpeed(p.speed);
-      if (typeof p.vizMode === "string") setVizMode(p.vizMode as VizMode);
-      if (typeof p.sensitivity === "number") setSensitivity([p.sensitivity]);
-      if (typeof p.pushToTalk === "boolean") setPushToTalk(p.pushToTalk);
+      if (typeof p["speed"] === "number") setSpeed(p["speed"]);
+      if (typeof p["vizMode"] === "string") setVizMode(p["vizMode"] as VizMode);
+      if (typeof p["sensitivity"] === "number") setSensitivity([p["sensitivity"]]);
+      if (typeof p["pushToTalk"] === "boolean") setPushToTalk(p["pushToTalk"]);
     } catch {
       /* ignore */
     }
@@ -490,7 +489,7 @@ function Trainer() {
                 <ChevronDown className="size-4" aria-hidden="true" />
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-2">
-                {scenarioTips.default!.map((t) => (
+                {scenarioTips["default"]!.map((t) => (
                   <p key={t} className="flex gap-2 text-sm text-muted-foreground">
                     <Lightbulb className="mt-0.5 size-4 shrink-0 text-gold" aria-hidden="true" />
                     {t}
@@ -675,13 +674,22 @@ function Trainer() {
                   </span>
                   <span>{Math.round(progress)}%</span>
                 </div>
-                <Progress
-                  value={progress}
-                  className="mt-1 h-2 bg-primary-foreground/15"
-                  indicatorClassName={cn(
-                    progress < 40 ? "bg-success" : progress < 80 ? "bg-warning" : "bg-gradient-brand",
-                  )}
-                />
+                <div
+                  className="mt-1 h-2 w-full overflow-hidden rounded-full bg-primary-foreground/15"
+                  role="progressbar"
+                  aria-valuenow={Math.round(progress)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Practice goal progress"
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      progress < 40 ? "bg-success" : progress < 80 ? "bg-warning" : "bg-gradient-brand",
+                    )}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               </div>
 
               {/* Objectives */}
