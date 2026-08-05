@@ -802,7 +802,12 @@ function Trainer() {
                       key={s}
                       size="sm"
                       variant={speed === s ? "secondary" : "ghost"}
-                      className="min-h-11 flex-1 rounded-xl text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground data-[variant=secondary]:text-foreground"
+                      className={cn(
+                        "min-h-11 flex-1 rounded-xl",
+                        speed === s
+                          ? "text-secondary-foreground"
+                          : "text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground",
+                      )}
                       onClick={() => {
                         setSpeed(s);
                         toast(`Playback speed ${s}x`);
