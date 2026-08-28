@@ -11,9 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SplatRouteImport } from './routes/$'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as BadgesRouteImport } from './routes/badges'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GuidelinesRouteImport } from './routes/guidelines'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SessionsRouteImport } from './routes/sessions'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TrainerRouteImport } from './routes/trainer'
 import { Route as TrainingIndexRouteImport } from './routes/training.index'
@@ -29,6 +33,16 @@ const SplatRoute = SplatRouteImport.update({
   path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BadgesRoute = BadgesRouteImport.update({
+  id: '/badges',
+  path: '/badges',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -42,6 +56,16 @@ const GuidelinesRoute = GuidelinesRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SessionsRoute = SessionsRouteImport.update({
+  id: '/sessions',
+  path: '/sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -68,9 +92,13 @@ const TrainingModuleIdRoute = TrainingModuleIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
+  '/badges': typeof BadgesRoute
   '/dashboard': typeof DashboardRoute
   '/guidelines': typeof GuidelinesRoute
   '/login': typeof LoginRoute
+  '/sessions': typeof SessionsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/trainer': typeof TrainerRoute
   '/training/$moduleId': typeof TrainingModuleIdRoute
@@ -79,9 +107,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
+  '/badges': typeof BadgesRoute
   '/dashboard': typeof DashboardRoute
   '/guidelines': typeof GuidelinesRoute
   '/login': typeof LoginRoute
+  '/sessions': typeof SessionsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/trainer': typeof TrainerRoute
   '/training/$moduleId': typeof TrainingModuleIdRoute
@@ -91,9 +123,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
+  '/badges': typeof BadgesRoute
   '/dashboard': typeof DashboardRoute
   '/guidelines': typeof GuidelinesRoute
   '/login': typeof LoginRoute
+  '/sessions': typeof SessionsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/trainer': typeof TrainerRoute
   '/training/$moduleId': typeof TrainingModuleIdRoute
@@ -104,9 +140,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/admin'
+    | '/badges'
     | '/dashboard'
     | '/guidelines'
     | '/login'
+    | '/sessions'
+    | '/settings'
     | '/signup'
     | '/trainer'
     | '/training/$moduleId'
@@ -115,9 +155,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/admin'
+    | '/badges'
     | '/dashboard'
     | '/guidelines'
     | '/login'
+    | '/sessions'
+    | '/settings'
     | '/signup'
     | '/trainer'
     | '/training/$moduleId'
@@ -126,9 +170,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/admin'
+    | '/badges'
     | '/dashboard'
     | '/guidelines'
     | '/login'
+    | '/sessions'
+    | '/settings'
     | '/signup'
     | '/trainer'
     | '/training/$moduleId'
@@ -138,9 +186,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  AdminRoute: typeof AdminRoute
+  BadgesRoute: typeof BadgesRoute
   DashboardRoute: typeof DashboardRoute
   GuidelinesRoute: typeof GuidelinesRoute
   LoginRoute: typeof LoginRoute
+  SessionsRoute: typeof SessionsRoute
+  SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   TrainerRoute: typeof TrainerRoute
   TrainingModuleIdRoute: typeof TrainingModuleIdRoute
@@ -163,6 +215,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/badges': {
+      id: '/badges'
+      path: '/badges'
+      fullPath: '/badges'
+      preLoaderRoute: typeof BadgesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -182,6 +248,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sessions': {
+      id: '/sessions'
+      path: '/sessions'
+      fullPath: '/sessions'
+      preLoaderRoute: typeof SessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -218,9 +298,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  AdminRoute: AdminRoute,
+  BadgesRoute: BadgesRoute,
   DashboardRoute: DashboardRoute,
   GuidelinesRoute: GuidelinesRoute,
   LoginRoute: LoginRoute,
+  SessionsRoute: SessionsRoute,
+  SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   TrainerRoute: TrainerRoute,
   TrainingModuleIdRoute: TrainingModuleIdRoute,
