@@ -182,6 +182,10 @@ function Dashboard() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuItem onClick={restartTour}>
+                  <Sparkles className="size-4" />
+                  Replay the tour
+                </DropdownMenuItem>
                 <DropdownMenuItem>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
