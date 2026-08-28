@@ -21,6 +21,7 @@ import {
   User,
   MessageCircle,
   Download,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
