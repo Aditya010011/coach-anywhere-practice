@@ -43,7 +43,7 @@ export function OnboardingTour({ steps, onFinish }: { steps: Step[]; onFinish: (
 
   useEffect(() => {
     function update() {
-      const el = step?.ref.current;
+      const el = step?.ref?.current;
       setRect(el ? el.getBoundingClientRect() : null);
     }
     update();
