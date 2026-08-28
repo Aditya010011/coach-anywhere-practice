@@ -104,7 +104,7 @@ function Dashboard() {
   const milestonesRef = useRef<HTMLDivElement>(null);
   const continueBtnRef = useRef<HTMLDivElement>(null);
 
-  const { enabled: tourEnabled, dismiss } = useOnboardingTour();
+  const { enabled: tourEnabled, dismiss, restart: restartTour } = useOnboardingTour();
   const [selectedBadge, setSelectedBadge] = useState<(typeof badges)[number] | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
