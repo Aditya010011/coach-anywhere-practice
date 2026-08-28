@@ -165,3 +165,49 @@ export const scenarios = [
   { value: "closing", icon: "🤝", label: "Closing techniques" },
   { value: "savings", icon: "💰", label: "Bill savings walkthrough" },
 ];
+
+// ============= Admin dashboard mock data =============
+
+export type PartnerStatus = "on-track" | "at-risk" | "completed" | "new";
+
+export type AdminPartner = {
+  id: string;
+  name: string;
+  email: string;
+  path: "Fast-Track" | "Standard" | "Self-Paced";
+  joinedDaysAgo: number;
+  modulesDone: number;
+  aiSessions: number;
+  practiceMins: number;
+  lastActive: string;
+  status: PartnerStatus;
+};
+
+export const adminPartners: AdminPartner[] = [
+  { id: "p1", name: "Sarah Mitchell", email: "sarah.m@example.com", path: "Fast-Track", joinedDaysAgo: 12, modulesDone: 2, aiSessions: 7, practiceMins: 45, lastActive: "2 hours ago", status: "on-track" },
+  { id: "p2", name: "James Okafor", email: "james.o@example.com", path: "Fast-Track", joinedDaysAgo: 10, modulesDone: 3, aiSessions: 12, practiceMins: 78, lastActive: "35 min ago", status: "on-track" },
+  { id: "p3", name: "Priya Sharma", email: "priya.s@example.com", path: "Standard", joinedDaysAgo: 21, modulesDone: 4, aiSessions: 15, practiceMins: 96, lastActive: "1 day ago", status: "completed" },
+  { id: "p4", name: "Tom Bradley", email: "tom.b@example.com", path: "Standard", joinedDaysAgo: 18, modulesDone: 1, aiSessions: 2, practiceMins: 14, lastActive: "6 days ago", status: "at-risk" },
+  { id: "p5", name: "Amina Yusuf", email: "amina.y@example.com", path: "Fast-Track", joinedDaysAgo: 5, modulesDone: 2, aiSessions: 6, practiceMins: 41, lastActive: "4 hours ago", status: "on-track" },
+  { id: "p6", name: "Dan Reeves", email: "dan.r@example.com", path: "Self-Paced", joinedDaysAgo: 30, modulesDone: 2, aiSessions: 4, practiceMins: 29, lastActive: "3 days ago", status: "at-risk" },
+  { id: "p7", name: "Lucy Chen", email: "lucy.c@example.com", path: "Standard", joinedDaysAgo: 2, modulesDone: 0, aiSessions: 1, practiceMins: 6, lastActive: "Yesterday", status: "new" },
+  { id: "p8", name: "Marcus Webb", email: "marcus.w@example.com", path: "Fast-Track", joinedDaysAgo: 14, modulesDone: 4, aiSessions: 18, practiceMins: 122, lastActive: "1 hour ago", status: "completed" },
+  { id: "p9", name: "Elena Petrova", email: "elena.p@example.com", path: "Self-Paced", joinedDaysAgo: 25, modulesDone: 3, aiSessions: 9, practiceMins: 64, lastActive: "5 hours ago", status: "on-track" },
+  { id: "p10", name: "Owen Griffiths", email: "owen.g@example.com", path: "Standard", joinedDaysAgo: 1, modulesDone: 0, aiSessions: 0, practiceMins: 0, lastActive: "Today", status: "new" },
+];
+
+export const moduleCompletionStats = [
+  { module: "M1: Your UW Story", rate: 90 },
+  { module: "M2: Commission", rate: 70 },
+  { module: "M3: Bill Savings", rate: 40 },
+  { module: "M4: Closing", rate: 20 },
+];
+
+export const weeklySignups = [
+  { week: "W1", partners: 3 },
+  { week: "W2", partners: 5 },
+  { week: "W3", partners: 4 },
+  { week: "W4", partners: 8 },
+  { week: "W5", partners: 6 },
+  { week: "W6", partners: 10 },
+];
