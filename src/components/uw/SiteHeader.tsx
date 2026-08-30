@@ -39,6 +39,9 @@ export function SiteHeader() {
           <Link to="/guidelines" className="text-sm text-muted-foreground hover:text-foreground">
             Guidelines
           </Link>
+          <Link to="/admin" className="text-sm text-muted-foreground hover:text-foreground">
+            Admin
+          </Link>
           <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground">
             FAQ
           </a>
