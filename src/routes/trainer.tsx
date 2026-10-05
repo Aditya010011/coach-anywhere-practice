@@ -149,6 +149,57 @@ function formatTime(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
+/** Parses an "mm:ss" timestamp (as produced by `formatTime`) into whole seconds. */
+function parseTimeLabel(at: string): number {
+  const parts = at.split(":").map((n) => Number.parseInt(n, 10));
+  const m = parts[0] ?? 0;
+  const s = parts[1] ?? 0;
+  if (Number.isNaN(m) || Number.isNaN(s)) return 0;
+  return m * 60 + s;
+}
+
+/**
+ * Derives real session metrics from the actual transcript turns and elapsed
+ * time, rather than hardcoded placeholder numbers. Falls back to sane
+ * defaults when there isn't enough data (e.g. a session ended immediately).
+ */
+function computeSessionMetrics(
+  messages: TranscriptMessage[],
+  durationSeconds: number,
+): import("@/components/uw/SessionSummaryDialog").SessionMetrics {
+  const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+
+  const yourWords = messages.filter((m) => m.who === "you").reduce((n, m) => n + countWords(m.text), 0);
+  const aiWords = messages.filter((m) => m.who === "ai").reduce((n, m) => n + countWords(m.text), 0);
+  const totalWords = yourWords + aiWords;
+
+  const speakingPct = totalWords > 0 ? Math.round((yourWords / totalWords) * 100) : 50;
+
+  const turns = messages.length;
+
+  // Average gap between consecutive turns, as a proxy for response time.
+  let avgResponseSeconds = 0;
+  if (messages.length > 1) {
+    const gaps: number[] = [];
+    for (let i = 1; i < messages.length; i++) {
+      const gap = parseTimeLabel(messages[i]!.at) - parseTimeLabel(messages[i - 1]!.at);
+      if (gap > 0) gaps.push(gap);
+    }
+    if (gaps.length > 0) avgResponseSeconds = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  }
+
+  const minutes = durationSeconds / 60;
+  const wpm = minutes > 0 ? Math.round(yourWords / minutes) : 0;
+
+  return {
+    durationLabel: formatTime(durationSeconds),
+    speakingPct,
+    turns,
+    avgResponse: avgResponseSeconds > 0 ? `${avgResponseSeconds.toFixed(1)}s` : "—",
+    wpm,
+  };
+}
+
 function Trainer() {
   const [active, setActive] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -157,7 +208,13 @@ function Trainer() {
   const [volume, setVolume] = useState([70]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const lastDuration = useRef(0);
+  const lastMetrics = useRef<import("@/components/uw/SessionSummaryDialog").SessionMetrics>({
+    durationLabel: "00:00",
+    speakingPct: 50,
+    turns: 0,
+    avgResponse: "—",
+    wpm: 0,
+  });
   const searchRef = useRef<HTMLInputElement | null>(null);
   const isMobile = useIsMobile();
 
@@ -336,7 +393,7 @@ function Trainer() {
 
   const endSession = useCallback(() => {
     if (useRealVoiceAi) vapi.stop();
-    lastDuration.current = seconds;
+    lastMetrics.current = computeSessionMetrics(messages, seconds);
     setActive(false);
     setPaused(false);
     setSeconds(0);
@@ -345,7 +402,7 @@ function Trainer() {
     setGoalCelebrated(false);
     setSummaryOpen(true);
     syncedVapiCount.current = 0;
-  }, [seconds, useRealVoiceAi, vapi]);
+  }, [messages, seconds, useRealVoiceAi, vapi]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -968,13 +1025,7 @@ function Trainer() {
       <SessionSummaryDialog
         open={summaryOpen}
         onOpenChange={setSummaryOpen}
-        metrics={{
-          durationLabel: formatTime(lastDuration.current),
-          speakingPct: 46,
-          turns: 6,
-          avgResponse: "2.4s",
-          wpm: 132,
-        }}
+        metrics={lastMetrics.current}
         onPractiseAgain={() => {
           setSummaryOpen(false);
           void startSession();
