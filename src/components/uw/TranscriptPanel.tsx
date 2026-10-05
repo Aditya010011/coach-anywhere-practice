@@ -122,11 +122,14 @@ function Bubble({
 export function TranscriptPanel({
   messages,
   typing,
+  partial,
   searchRef,
   className,
 }: {
   messages: TranscriptMessage[];
   typing?: boolean;
+  /** In-progress (not yet final) speech-to-text turn, shown as live captions. */
+  partial?: { who: "ai" | "you"; text: string } | null;
   searchRef?: React.RefObject<HTMLInputElement | null>;
   className?: string;
 }) {
@@ -147,7 +150,7 @@ export function TranscriptPanel({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     firstRender.current = false;
-  }, [messages.length, typing]);
+  }, [messages.length, typing, partial?.text]);
 
   function exportTxt() {
     const body = messages.map((m) => `[${m.at}] ${m.who === "you" ? "You" : "AI Coach"}: ${m.text}`).join("\n");
@@ -227,11 +230,24 @@ export function TranscriptPanel({
         {messages.map((m, i) => (
           <Bubble key={m.id} m={m} query={query} animate={i === messages.length - 1} />
         ))}
-        {typing && (
+        {!partial && typing && (
           <div className="w-fit rounded-2xl rounded-bl-sm bg-gradient-brand px-4 py-3 text-sm shadow-lift">
             <span className="animate-pulse tracking-[0.2em]" aria-label="AI coach is responding">
               ●●●
             </span>
+          </div>
+        )}
+        {partial && (
+          <div
+            className={cn(
+              "w-fit max-w-[88%] rounded-2xl px-4 py-3 text-sm italic opacity-70",
+              partial.who === "you"
+                ? "ml-auto rounded-br-sm bg-primary-foreground/12"
+                : "rounded-bl-sm bg-gradient-brand",
+            )}
+            aria-live="polite"
+          >
+            {partial.text}
           </div>
         )}
         <div ref={endRef} />

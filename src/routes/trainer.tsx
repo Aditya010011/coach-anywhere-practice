@@ -46,6 +46,7 @@ import { LiveWaveform, type VizMode } from "@/components/uw/LiveWaveform";
 import { TranscriptPanel, type TranscriptMessage } from "@/components/uw/TranscriptPanel";
 import { SessionSummaryDialog } from "@/components/uw/SessionSummaryDialog";
 import { useMicAnalyser } from "@/hooks/use-mic-analyser";
+import { useVapi } from "@/hooks/use-vapi";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fireConfetti } from "@/lib/confetti";
 import { scenarios, practiceSessions } from "@/lib/uw-data";
@@ -72,7 +73,8 @@ export const Route = createFileRoute("/trainer")({
   component: Trainer,
 });
 
-// TODO(vapi): replace this scripted exchange with live Vapi SDK events.
+// Fallback scripted exchange, used only when Vapi credentials are not configured
+// (VITE_VAPI_PUBLIC_KEY / VITE_VAPI_ASSISTANT_ID) so the demo still works offline.
 const script: Omit<TranscriptMessage, "id">[] = [
   {
     who: "ai",
@@ -167,6 +169,8 @@ function Trainer() {
 
   // Audio
   const mic = useMicAnalyser();
+  const vapi = useVapi();
+  const useRealVoiceAi = vapi.isConfigured;
   const [vizMode, setVizMode] = useState<VizMode>("bars");
   const [sensitivity, setSensitivity] = useState([1]);
   const [speed, setSpeed] = useState(1);
@@ -178,7 +182,8 @@ function Trainer() {
   // Conversation
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [typing, setTyping] = useState(false);
-  const [aiSpeaking, setAiSpeaking] = useState(false);
+  const [scriptedAiSpeaking, setScriptedAiSpeaking] = useState(false);
+  const aiSpeaking = useRealVoiceAi ? vapi.aiSpeaking : scriptedAiSpeaking;
   const [silence, setSilence] = useState(0);
   const [hintDismissed, setHintDismissed] = useState(false);
   const [done, setDone] = useState<string[]>([]);
@@ -229,8 +234,9 @@ function Trainer() {
     return () => window.clearInterval(id);
   }, [active, paused, speaking]);
 
-  // Scripted conversation
+  // Scripted conversation (fallback demo mode only — skipped when Vapi is configured)
   useEffect(() => {
+    if (useRealVoiceAi) return;
     if (!active || paused) return;
     if (messages.length >= script.length) return;
     const next = script[messages.length]!;
@@ -241,10 +247,10 @@ function Trainer() {
         setTyping(true);
         typeId = window.setTimeout(() => {
           setTyping(false);
-          setAiSpeaking(true);
+          setScriptedAiSpeaking(true);
           if (navigator.vibrate) navigator.vibrate(40);
           setMessages((m) => [...m, { ...next, id: `m${m.length}` }]);
-          window.setTimeout(() => setAiSpeaking(false), 2600);
+          window.setTimeout(() => setScriptedAiSpeaking(false), 2600);
           if (next.keyTip) fireConfetti(1200);
         }, 1100);
       } else {
@@ -255,7 +261,37 @@ function Trainer() {
       window.clearTimeout(id);
       window.clearTimeout(typeId);
     };
-  }, [active, paused, messages.length, speed]);
+  }, [useRealVoiceAi, active, paused, messages.length, speed]);
+
+  // Live conversation — syncs real Vapi transcript turns into the same
+  // messages state the UI already renders.
+  const syncedVapiCount = useRef(0);
+  useEffect(() => {
+    if (!useRealVoiceAi) return;
+    if (vapi.transcript.length <= syncedVapiCount.current) return;
+    const newTurns = vapi.transcript.slice(syncedVapiCount.current);
+    syncedVapiCount.current = vapi.transcript.length;
+    setMessages((m) => [
+      ...m,
+      ...newTurns.map((t, i) => ({
+        ...t,
+        id: `v${m.length + i}`,
+        at: formatTime(seconds),
+      })),
+    ]);
+    if (navigator.vibrate) navigator.vibrate(40);
+  }, [useRealVoiceAi, vapi.transcript, seconds]);
+
+  useEffect(() => {
+    if (!useRealVoiceAi) return;
+    if (vapi.error) toast.error(vapi.error);
+  }, [useRealVoiceAi, vapi.error]);
+
+  useEffect(() => {
+    if (!useRealVoiceAi) return;
+    if (vapi.status === "ended" && active) endSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useRealVoiceAi, vapi.status]);
 
   // Objectives auto-check
   const objectives = focus.length ? focus : ["Overcoming objections", "Explaining bundles"];
@@ -299,6 +335,7 @@ function Trainer() {
   }, [active]);
 
   const endSession = useCallback(() => {
+    if (useRealVoiceAi) vapi.stop();
     lastDuration.current = seconds;
     setActive(false);
     setPaused(false);
@@ -307,7 +344,8 @@ function Trainer() {
     setDone([]);
     setGoalCelebrated(false);
     setSummaryOpen(true);
-  }, [seconds]);
+    syncedVapiCount.current = 0;
+  }, [seconds, useRealVoiceAi, vapi]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -347,6 +385,10 @@ function Trainer() {
     setMessages([]);
     setSilence(0);
     setHintDismissed(false);
+    if (useRealVoiceAi) {
+      syncedVapiCount.current = 0;
+      await vapi.start();
+    }
   }
 
   const voiceState = aiSpeaking ? "ai" : speaking ? "user" : "idle";
@@ -624,7 +666,8 @@ function Trainer() {
                   )}
                 >
                   <LiveWaveform
-                    analyser={mic.analyserRef.current}
+                    analyser={useRealVoiceAi ? null : mic.analyserRef.current}
+                    level={useRealVoiceAi ? vapi.volumeLevel : undefined}
                     mode={vizMode}
                     state={voiceState}
                     sensitivity={sensitivity[0] ?? 1}
@@ -634,6 +677,19 @@ function Trainer() {
                 <p className="mt-2 text-center text-sm font-medium text-primary-foreground/85" role="status">
                   {statusLabel}
                 </p>
+                {useRealVoiceAi && vapi.status === "error" && (
+                  <div className="mx-auto mt-3 flex max-w-sm items-center justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-left text-xs">
+                    <p className="flex-1">{vapi.error ?? "Call disconnected."}</p>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="min-h-9 shrink-0 rounded-lg"
+                      onClick={() => void vapi.start()}
+                    >
+                      Reconnect
+                    </Button>
+                  </div>
+                )}
                 {!speaking && !aiSpeaking && silence >= 2 && silence < 5 && (
                   <p className="mt-1 text-center text-xs text-primary-foreground/60">
                     Waiting for response…
@@ -718,7 +774,8 @@ function Trainer() {
 
             <TranscriptPanel
               messages={messages}
-              typing={typing}
+              typing={useRealVoiceAi ? vapi.status === "connecting" : typing}
+              partial={useRealVoiceAi ? vapi.partial : null}
               searchRef={searchRef}
               className="min-h-64 flex-1 landscape:h-[60dvh]"
             />
@@ -743,7 +800,13 @@ function Trainer() {
               ) : (
                 <Button
                   variant="ghost"
-                  onClick={() => setMuted((m) => !m)}
+                  onClick={() =>
+                    setMuted((m) => {
+                      const next = !m;
+                      if (useRealVoiceAi) vapi.setMuted(next);
+                      return next;
+                    })
+                  }
                   aria-pressed={muted}
                   className="min-h-12 justify-start text-primary-foreground/85 hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 >

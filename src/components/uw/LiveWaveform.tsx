@@ -17,21 +17,30 @@ export function LiveWaveform({
   mode = "bars",
   state = "idle",
   sensitivity = 1,
+  level,
   className,
 }: {
   analyser: AnalyserNode | null;
   mode?: VizMode;
   state?: VoiceState;
   sensitivity?: number;
+  /**
+   * Optional 0-1 volume level used to drive the animation when no
+   * AnalyserNode is available (e.g. remote/Vapi audio we don't have a
+   * local stream for). Ignored when `analyser` is provided.
+   */
+  level?: number | undefined;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const modeRef = useRef(mode);
   const stateRef = useRef(state);
   const sensRef = useRef(sensitivity);
+  const levelRef = useRef(level);
   modeRef.current = mode;
   stateRef.current = state;
   sensRef.current = sensitivity;
+  levelRef.current = level;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -63,7 +72,7 @@ export function LiveWaveform({
       const amp = (i: number) => {
         const raw = analyser
           ? (data[Math.floor((i / BAR_COUNT) * (data.length * 0.6))] ?? 0) / 255
-          : (Math.sin(t + i * 0.4) * 0.5 + 0.5) * 0.55;
+          : (Math.sin(t + i * 0.4) * 0.5 + 0.5) * 0.55 * (levelRef.current ?? 1);
         return Math.min(1, Math.max(0.06, raw * sensRef.current));
       };
 
