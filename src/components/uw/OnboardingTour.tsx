@@ -9,7 +9,7 @@ const STORAGE_KEY = "uw-onboarding-tour";
 type Step = {
   title: string;
   description: string;
-  ref: RefObject<HTMLElement | null>;
+  ref?: RefObject<HTMLElement | null>;
 };
 
 export function useOnboardingTour() {
@@ -24,7 +24,14 @@ export function useOnboardingTour() {
     }
   }, []);
 
-  return { enabled, dismiss: () => setEnabled(false) };
+  return {
+    enabled,
+    dismiss: () => setEnabled(false),
+    restart: () => {
+      window.localStorage.setItem(STORAGE_KEY, "pending");
+      setEnabled(true);
+    },
+  };
 }
 
 export function OnboardingTour({ steps, onFinish }: { steps: Step[]; onFinish: () => void }) {
@@ -36,7 +43,7 @@ export function OnboardingTour({ steps, onFinish }: { steps: Step[]; onFinish: (
 
   useEffect(() => {
     function update() {
-      const el = step?.ref.current;
+      const el = step?.ref?.current;
       setRect(el ? el.getBoundingClientRect() : null);
     }
     update();

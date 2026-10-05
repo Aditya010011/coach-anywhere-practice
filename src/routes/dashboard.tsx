@@ -21,6 +21,7 @@ import {
   User,
   MessageCircle,
   Download,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -104,7 +105,7 @@ function Dashboard() {
   const milestonesRef = useRef<HTMLDivElement>(null);
   const continueBtnRef = useRef<HTMLDivElement>(null);
 
-  const { enabled: tourEnabled, dismiss } = useOnboardingTour();
+  const { enabled: tourEnabled, dismiss, restart: restartTour } = useOnboardingTour();
   const [selectedBadge, setSelectedBadge] = useState<(typeof badges)[number] | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
@@ -113,11 +114,41 @@ function Dashboard() {
   ]);
 
   const tourSteps = [
-    { title: "Your progress", description: "This shows your overall training progress", ref: progressRingRef },
-    { title: "Keep going", description: "Start here to continue your training", ref: nextModuleRef },
-    { title: "Your AI coach", description: "Practice anytime with your AI coach — no judgment, unlimited retries", ref: aiCardRef },
-    { title: "Milestones", description: "Track your journey day by day", ref: milestonesRef },
-    { title: "Let's go!", description: "Ready to begin? Let's start Module 3!", ref: continueBtnRef },
+    {
+      title: "Welcome to UW Partner Coach 👋",
+      description:
+        "This quick tour shows you exactly what to click to complete your training. It takes less than a minute — let's go!",
+    },
+    {
+      title: "Your progress at a glance",
+      description:
+        "This ring tracks how much of your training path you've completed, plus your key stats underneath.",
+      ref: progressRingRef,
+    },
+    {
+      title: "Always start here",
+      description:
+        "Your next unlocked module lives in this card. Tap “Start module” to watch the lesson and keep your streak going.",
+      ref: nextModuleRef,
+    },
+    {
+      title: "Practice with your AI coach",
+      description:
+        "Rehearse real customer conversations by voice, any time — no judgment, unlimited retries. This is where confidence is built.",
+      ref: aiCardRef,
+    },
+    {
+      title: "Follow your milestones",
+      description:
+        "Your day-by-day journey: what's done, what's next, and what unlocks as you progress (like mentor calls and advanced modules).",
+      ref: milestonesRef,
+    },
+    {
+      title: "You're ready!",
+      description:
+        "That's everything. Hit “Continue training” whenever you're ready — your AI coach is waiting. You can replay this tour anytime from your profile menu.",
+      ref: continueBtnRef,
+    },
   ];
 
   function sendChat() {
@@ -152,6 +183,10 @@ function Dashboard() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuItem onClick={restartTour}>
+                  <Sparkles className="size-4" />
+                  Replay the tour
+                </DropdownMenuItem>
                 <DropdownMenuItem>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
