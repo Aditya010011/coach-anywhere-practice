@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { VoiceGuide } from "@/components/uw/VoiceGuide";
 
 
 function NotFoundComponent() {
@@ -135,6 +136,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster position="top-right" richColors closeButton />
+      <VoiceGuide />
     </QueryClientProvider>
   );
 }

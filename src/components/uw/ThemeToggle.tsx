@@ -23,6 +23,12 @@ export function useTheme() {
     });
   }
 
+  // Allow the site-wide voice guide to toggle theme via a custom event.
+  useEffect(() => {
+    window.addEventListener("uw:toggle-theme", toggle);
+    return () => window.removeEventListener("uw:toggle-theme", toggle);
+  }, []);
+
   return { theme, toggle };
 }
 
