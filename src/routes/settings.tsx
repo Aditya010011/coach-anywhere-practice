@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/uw/ThemeToggle";
 import { RequireAuth } from "@/components/uw/RequireAuth";
+import { getSession, getDisplayName } from "@/lib/auth";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -47,8 +48,9 @@ function Section({ icon: Icon, title, children }: { icon: typeof Bell; title: st
 }
 
 function SettingsPage() {
-  const [name, setName] = useState("Sarah Mitchell");
-  const [email, setEmail] = useState("sarah.m@example.com");
+  const session = getSession();
+  const [name, setName] = useState(() => getDisplayName(session));
+  const [email, setEmail] = useState(() => session?.email ?? "");
   const [prefs, setPrefs] = useState({
     weeklySummary: true,
     streakReminders: true,

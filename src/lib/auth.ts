@@ -41,6 +41,28 @@ export function login(email: string, name?: string): void {
   }
 }
 
+/** Best-effort display name: explicit name, or derived from the email's local part. */
+export function getDisplayName(session: AuthSession | null): string {
+  if (!session) return "Partner";
+  if (session.name?.trim()) return session.name.trim();
+  const local = session.email.split("@")[0] ?? "";
+  const cleaned = local.replace(/[._-]+/g, " ").trim();
+  if (!cleaned) return "Partner";
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Up to 2-letter initials for an avatar, derived from a display name. */
+export function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "P";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export function logout(): void {
   if (typeof window === "undefined") return;
   try {

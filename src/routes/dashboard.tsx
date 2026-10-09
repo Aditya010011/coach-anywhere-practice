@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { UwLogo } from "@/components/uw/SiteHeader";
 import { OnboardingTour, useOnboardingTour } from "@/components/uw/OnboardingTour";
 import { RequireAuth } from "@/components/uw/RequireAuth";
+import { getSession, getDisplayName, getInitials } from "@/lib/auth";
 import { recentActivity, badges } from "@/lib/uw-data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -114,8 +115,13 @@ function Dashboard() {
   const [selectedBadge, setSelectedBadge] = useState<(typeof badges)[number] | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
+
+  const displayName = getDisplayName(getSession());
+  const firstName = displayName.split(" ")[0];
+  const initials = getInitials(displayName);
+
   const [chatLog, setChatLog] = useState<string[]>([
-    "Hi Sarah! I'm your support assistant — how can I help today?",
+    `Hi ${firstName}! I'm your support assistant — how can I help today?`,
   ]);
 
   const tourSteps = [
@@ -178,10 +184,10 @@ function Dashboard() {
                 <Button variant="ghost" className="min-h-11 gap-2 px-2">
                   <Avatar className="size-8">
                     <AvatarFallback className="bg-accent text-xs text-accent-foreground">
-                      SM
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden text-sm font-medium sm:inline">Sarah</span>
+                  <span className="hidden text-sm font-medium sm:inline">{firstName}</span>
                   <ChevronDown className="size-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -247,7 +253,7 @@ function Dashboard() {
 
           <div ref={progressRingRef} className="rounded-2xl border border-border bg-card p-6 shadow-card">
             <h1 id="progress-heading" className="text-xl font-bold tracking-tight">
-              Welcome back, Sarah 👋
+              Welcome back, {firstName} 👋
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               You're on the Fast-Track path. Nice pace.
