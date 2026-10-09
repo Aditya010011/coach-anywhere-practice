@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Bell, Mic, User } from "lucide-react";
 
-import { SiteHeader } from "@/components/uw/SiteHeader";
+import { AppHeader } from "@/components/uw/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +63,7 @@ function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader />
+      <AppHeader />
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">

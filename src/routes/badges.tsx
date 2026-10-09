@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SiteHeader } from "@/components/uw/SiteHeader";
+import { AppHeader } from "@/components/uw/AppHeader";
 import { badges } from "@/lib/uw-data";
 import { Progress } from "@/components/ui/progress";
 import { RequireAuth } from "@/components/uw/RequireAuth";
@@ -33,7 +33,7 @@ function BadgesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader />
+      <AppHeader />
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Your Badges</h1>
         <p className="mt-1 text-sm text-muted-foreground">

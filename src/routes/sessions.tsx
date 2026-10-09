@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronDown, Star } from "lucide-react";
 
-import { SiteHeader } from "@/components/uw/SiteHeader";
+import { AppHeader } from "@/components/uw/AppHeader";
 import { Badge } from "@/components/ui/badge";
 import { practiceSessions } from "@/lib/uw-data";
 import { RequireAuth } from "@/components/uw/RequireAuth";
@@ -48,7 +48,7 @@ function SessionsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader />
+      <AppHeader />
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session History</h1>
         <p className="mt-1 text-sm text-muted-foreground">

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { trainingModules, type ModuleStatus } from "@/lib/uw-data";
 import { RequireAuth } from "@/components/uw/RequireAuth";
+import { AppHeader } from "@/components/uw/AppHeader";
 
 export const Route = createFileRoute("/training/")({
   head: () => ({
@@ -101,6 +102,7 @@ function TrainingIndex() {
 
   return (
     <div className="min-h-dvh bg-secondary/40 pb-16">
+      <AppHeader />
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
         <Breadcrumb>
           <BreadcrumbList>

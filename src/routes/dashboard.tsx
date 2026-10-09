@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  Bell,
   Mic,
   Lock,
   Check,
@@ -13,7 +12,6 @@ import {
   Clock,
   Target,
   Play,
-  ChevronDown,
   Share2,
   BarChart3,
   BookOpen,
@@ -21,27 +19,19 @@ import {
   User,
   MessageCircle,
   Download,
-  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { UwLogo } from "@/components/uw/SiteHeader";
+import { AppHeader } from "@/components/uw/AppHeader";
 import { OnboardingTour, useOnboardingTour } from "@/components/uw/OnboardingTour";
 import { RequireAuth } from "@/components/uw/RequireAuth";
-import { getSession, getDisplayName, getInitials } from "@/lib/auth";
+import { getSession, getDisplayName } from "@/lib/auth";
 import { recentActivity, badges } from "@/lib/uw-data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -105,20 +95,20 @@ const quickActions = [
 ] as const;
 
 function Dashboard() {
+  const navigate = useNavigate();
   const progressRingRef = useRef<HTMLDivElement>(null);
   const nextModuleRef = useRef<HTMLDivElement>(null);
   const aiCardRef = useRef<HTMLDivElement>(null);
   const milestonesRef = useRef<HTMLDivElement>(null);
   const continueBtnRef = useRef<HTMLDivElement>(null);
 
-  const { enabled: tourEnabled, dismiss, restart: restartTour } = useOnboardingTour();
+  const { enabled: tourEnabled, dismiss } = useOnboardingTour();
   const [selectedBadge, setSelectedBadge] = useState<(typeof badges)[number] | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
 
   const displayName = getDisplayName(getSession());
   const firstName = displayName.split(" ")[0];
-  const initials = getInitials(displayName);
 
   const [chatLog, setChatLog] = useState<string[]>([
     `Hi ${firstName}! I'm your support assistant — how can I help today?`,
@@ -170,40 +160,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-dvh bg-secondary/40 pb-24 lg:pb-0">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
-        <div className="mx-auto grid h-16 max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 sm:px-6">
-          <Link to="/dashboard" aria-label="Dashboard home" className="min-w-0">
-            <UwLogo />
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" aria-label="Notifications" className="min-h-11 min-w-11">
-              <Bell />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="min-h-11 gap-2 px-2">
-                  <Avatar className="size-8">
-                    <AvatarFallback className="bg-accent text-xs text-accent-foreground">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden text-sm font-medium sm:inline">{firstName}</span>
-                  <ChevronDown className="size-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem onClick={restartTour}>
-                  <Sparkles className="size-4" />
-                  Replay the tour
-                </DropdownMenuItem>
-                <DropdownMenuItem>Log out</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="mx-auto grid max-w-6xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-12 lg:py-10">
         {/* Left: progress */}
@@ -436,6 +393,7 @@ function Dashboard() {
                       if (locked) return;
                       if (qa.key === "support") setSupportOpen(true);
                       else if (qa.key === "report") toast.success("Download ready!");
+                      else if (qa.key === "profile") navigate({ to: "/settings" });
                       else toast("Coming soon");
                     }}
                     className={
