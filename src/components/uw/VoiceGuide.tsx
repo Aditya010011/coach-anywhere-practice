@@ -80,6 +80,7 @@ export function VoiceGuide() {
   const logRef = useRef<HTMLDivElement>(null);
 
   const publicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY;
+  const assistantId = import.meta.env.VITE_VAPI_ASSISTANT_ID;
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
@@ -133,8 +134,8 @@ export function VoiceGuide() {
   );
 
   const start = useCallback(async () => {
-    if (!publicKey) {
-      toast.error("Voice guide isn't set up yet — the Vapi public key is missing.");
+    if (!publicKey || !assistantId) {
+      toast.error("Voice guide isn't set up yet — the Vapi credentials are missing.");
       return;
     }
     setStatus("connecting");
@@ -190,8 +191,11 @@ export function VoiceGuide() {
         });
       }
 
-      await vapi.start({
-        name: "UW Website Guide",
+      // Same Vapi assistant as the /trainer page (VITE_VAPI_ASSISTANT_ID), so
+      // there's a single assistant with the full product/site knowledge and
+      // a consistent voice — just with its own first message, system prompt
+      // and navigation tools layered on top for this site-guide context.
+      await vapi.start(assistantId, {
         firstMessage: "Hi, I'm Ava, your UW Partner Coach guide. What can I help you with?",
         model: {
           provider: "openai",
@@ -199,15 +203,13 @@ export function VoiceGuide() {
           messages: [{ role: "system", content: buildSiteKnowledge(pathRef.current) }],
           tools: TOOLS,
         },
-        voice: { provider: "vapi", voiceId: "Elliot" },
-        transcriber: { provider: "deepgram", model: "nova-2", language: "en-GB" },
       } as any);
     } catch (e) {
       console.error(e);
       setStatus("idle");
       toast.error("The voice guide couldn't start. Check your microphone and try again.");
     }
-  }, [publicKey, runTool]);
+  }, [publicKey, assistantId, runTool]);
 
   const stop = () => vapiRef.current?.stop();
   const toggleMute = () => {
