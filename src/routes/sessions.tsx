@@ -5,6 +5,7 @@ import { ChevronDown, Star } from "lucide-react";
 import { SiteHeader } from "@/components/uw/SiteHeader";
 import { Badge } from "@/components/ui/badge";
 import { practiceSessions } from "@/lib/uw-data";
+import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/sessions")({
   head: () => ({
@@ -21,7 +22,11 @@ export const Route = createFileRoute("/sessions")({
       },
     ],
   }),
-  component: SessionsPage,
+  component: () => (
+    <RequireAuth>
+      <SessionsPage />
+    </RequireAuth>
+  ),
 });
 
 function Rating({ value }: { value: number }) {

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UwLogo } from "@/components/uw/SiteHeader";
+import { login } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -51,8 +52,9 @@ function LoginPage() {
     mode: "onBlur",
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (data: LoginForm) => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
+    login(data.email);
     toast.success("Signed in successfully!");
     navigate({ to: "/dashboard" });
   };

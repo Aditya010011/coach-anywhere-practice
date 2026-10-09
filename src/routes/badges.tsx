@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/uw/SiteHeader";
 import { badges } from "@/lib/uw-data";
 import { Progress } from "@/components/ui/progress";
+import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/badges")({
   head: () => ({
@@ -18,7 +19,11 @@ export const Route = createFileRoute("/badges")({
       },
     ],
   }),
-  component: BadgesPage,
+  component: () => (
+    <RequireAuth>
+      <BadgesPage />
+    </RequireAuth>
+  ),
 });
 
 function BadgesPage() {

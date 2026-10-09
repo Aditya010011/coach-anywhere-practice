@@ -49,6 +49,7 @@ import {
   type AdminPartner,
   type PartnerStatus,
 } from "@/lib/uw-data";
+import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -68,7 +69,11 @@ export const Route = createFileRoute("/admin")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: AdminPage,
+  component: () => (
+    <RequireAuth>
+      <AdminPage />
+    </RequireAuth>
+  ),
 });
 
 const statusStyles: Record<PartnerStatus, { label: string; className: string }> = {

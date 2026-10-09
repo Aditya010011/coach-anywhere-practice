@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/uw/ThemeToggle";
+import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -27,7 +28,11 @@ export const Route = createFileRoute("/settings")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: SettingsPage,
+  component: () => (
+    <RequireAuth>
+      <SettingsPage />
+    </RequireAuth>
+  ),
 });
 
 function Section({ icon: Icon, title, children }: { icon: typeof Bell; title: string; children: React.ReactNode }) {

@@ -24,6 +24,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { trainingModules, type ModuleStatus } from "@/lib/uw-data";
+import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/training/")({
   head: () => ({
@@ -40,7 +41,11 @@ export const Route = createFileRoute("/training/")({
       },
     ],
   }),
-  component: TrainingIndex,
+  component: () => (
+    <RequireAuth>
+      <TrainingIndex />
+    </RequireAuth>
+  ),
 });
 
 const MODULE_ICONS: Record<string, typeof PiggyBank> = {

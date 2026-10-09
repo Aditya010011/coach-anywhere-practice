@@ -44,6 +44,7 @@ import { Card } from "@/components/ui/card";
 import { getModule, scenarios, trainingModules } from "@/lib/uw-data";
 import { fireConfetti } from "@/lib/confetti";
 import { toast } from "sonner";
+import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/training/$moduleId")({
   head: ({ params }) => {
@@ -61,7 +62,11 @@ export const Route = createFileRoute("/training/$moduleId")({
       ],
     };
   },
-  component: ModuleDetail,
+  component: () => (
+    <RequireAuth>
+      <ModuleDetail />
+    </RequireAuth>
+  ),
 });
 
 const MODULE_ICONS: Record<string, typeof PiggyBank> = {

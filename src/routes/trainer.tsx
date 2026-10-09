@@ -51,6 +51,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { fireConfetti } from "@/lib/confetti";
 import { scenarios, practiceSessions } from "@/lib/uw-data";
 import { cn } from "@/lib/utils";
+import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/trainer")({
   head: () => ({
@@ -70,7 +71,11 @@ export const Route = createFileRoute("/trainer")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Trainer,
+  component: () => (
+    <RequireAuth>
+      <Trainer />
+    </RequireAuth>
+  ),
 });
 
 // Fallback scripted exchange, used only when Vapi credentials are not configured

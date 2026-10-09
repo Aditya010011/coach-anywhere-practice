@@ -40,6 +40,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Input } from "@/components/ui/input";
 import { UwLogo } from "@/components/uw/SiteHeader";
 import { OnboardingTour, useOnboardingTour } from "@/components/uw/OnboardingTour";
+import { RequireAuth } from "@/components/uw/RequireAuth";
 import { recentActivity, badges } from "@/lib/uw-data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -58,7 +59,11 @@ export const Route = createFileRoute("/dashboard")({
       },
     ],
   }),
-  component: Dashboard,
+  component: () => (
+    <RequireAuth>
+      <Dashboard />
+    </RequireAuth>
+  ),
 });
 
 const PROGRESS = 50;
