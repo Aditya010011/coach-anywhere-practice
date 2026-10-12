@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { UwLogo } from "@/components/uw/SiteHeader";
 import { fireConfetti } from "@/lib/confetti";
-import { login } from "@/lib/auth";
+import { signUp } from "@/lib/auth";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -136,10 +136,17 @@ function SignupPage() {
               onBack={() => setStep(2)}
               onSubmit={async () => {
                 setIsSubmitting(true);
-                await new Promise((resolve) => setTimeout(resolve, 1200));
+                const { error } = await signUp(
+                  step1Data?.email ?? "",
+                  step2Data?.password ?? "",
+                  step1Data?.fullName ?? "",
+                );
                 setIsSubmitting(false);
+                if (error) {
+                  toast.error(error);
+                  return;
+                }
                 localStorage.setItem("uw-onboarding-tour", "pending");
-                login(step1Data?.email ?? "", step1Data?.fullName);
                 fireConfetti();
                 toast.success("Welcome aboard!");
                 navigate({ to: "/dashboard" });

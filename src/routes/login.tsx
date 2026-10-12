@@ -53,8 +53,11 @@ function LoginPage() {
   });
 
   const onSubmit = async (data: LoginForm) => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    login(data.email);
+    const { error } = await login(data.email, data.password);
+    if (error) {
+      toast.error(error);
+      return;
+    }
     toast.success("Signed in successfully!");
     navigate({ to: "/dashboard" });
   };

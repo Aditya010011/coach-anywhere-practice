@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { VoiceGuide } from "@/components/uw/VoiceGuide";
+import { initAuthListener } from "@/lib/auth";
 
 
 function NotFoundComponent() {
@@ -130,6 +131,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    return initAuthListener();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

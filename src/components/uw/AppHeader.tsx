@@ -33,8 +33,8 @@ export function AppHeader() {
   const firstName = displayName.split(" ")[0];
   const initials = getInitials(displayName);
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate({ to: "/login" });
   }
 

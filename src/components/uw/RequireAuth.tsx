@@ -2,26 +2,33 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 
-import { isAuthenticated } from "@/lib/auth";
+import { hasActiveSession } from "@/lib/auth";
 
 /**
  * Client-side route guard for pages that require a signed-in partner.
  *
  * There's no backend session to check during SSR, so auth is verified once
- * the page hydrates in the browser (via localStorage). Unauthenticated
- * visitors are redirected to /login; a brief loading state avoids flashing
- * protected content before the check completes.
+ * the page hydrates in the browser against the real Supabase session.
+ * Unauthenticated visitors are redirected to /login; a brief loading state
+ * avoids flashing protected content before the check completes.
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      navigate({ to: "/login" });
-      return;
-    }
-    setChecked(true);
+    let cancelled = false;
+    hasActiveSession().then((authed) => {
+      if (cancelled) return;
+      if (!authed) {
+        navigate({ to: "/login" });
+        return;
+      }
+      setChecked(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   if (!checked) {

@@ -1,8 +1,12 @@
-// Lightweight client-side mock auth.
-// TODO: Replace with real session/auth (Supabase, etc.) when a backend exists.
-// There is no server to verify credentials against yet, so this just tracks
-// "is there a signed-in partner on this device" via localStorage, and is
-// only ever read/written in the browser.
+// Real auth backed by Supabase (see src/lib/supabase.ts).
+//
+// Supabase's own session check is async, but most of the app (dashboard
+// greeting, header avatar, route guards) wants a *synchronous* read. To
+// bridge that, we keep a small localStorage mirror of the current Supabase
+// session that's kept in sync via `initAuthListener()` (called once from the
+// root layout) and updated immediately on login/signup/logout.
+
+import { supabase } from "@/lib/supabase";
 
 const AUTH_KEY = "uw-auth-session";
 
@@ -11,6 +15,16 @@ export type AuthSession = {
   name?: string;
   signedInAt: string;
 };
+
+function writeCache(session: AuthSession | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (session) window.localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+    else window.localStorage.removeItem(AUTH_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 export function isAuthenticated(): boolean {
   if (typeof window === "undefined") return false;
@@ -31,14 +45,58 @@ export function getSession(): AuthSession | null {
   }
 }
 
-export function login(email: string, name?: string): void {
-  if (typeof window === "undefined") return;
-  const session: AuthSession = { email, name, signedInAt: new Date().toISOString() };
-  try {
-    window.localStorage.setItem(AUTH_KEY, JSON.stringify(session));
-  } catch {
-    /* ignore */
+/**
+ * Subscribes to real Supabase auth state and keeps the localStorage mirror
+ * in sync (covers token refresh, cross-tab sign-out, magic-link return,
+ * etc). Call once near the app root. Returns an unsubscribe function.
+ */
+export function initAuthListener(): () => void {
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      writeCache({
+        email: session.user.email ?? "",
+        name: (session.user.user_metadata?.full_name as string | undefined) ?? undefined,
+        signedInAt: new Date().toISOString(),
+      });
+    } else {
+      writeCache(null);
+    }
+  });
+  return () => data.subscription.unsubscribe();
+}
+
+/** True client-side check against Supabase (use for route guards). */
+export async function hasActiveSession(): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  return !!data.session;
+}
+
+export async function signUp(
+  email: string,
+  password: string,
+  name: string,
+): Promise<{ error: string | null }> {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: name } },
+  });
+  if (error) return { error: error.message };
+  if (data.session?.user) {
+    writeCache({ email, name, signedInAt: new Date().toISOString() });
   }
+  return { error: null };
+}
+
+export async function login(email: string, password: string): Promise<{ error: string | null }> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { error: error.message };
+  writeCache({
+    email,
+    name: (data.user?.user_metadata?.full_name as string | undefined) ?? undefined,
+    signedInAt: new Date().toISOString(),
+  });
+  return { error: null };
 }
 
 /** Best-effort display name: explicit name, or derived from the email's local part. */
@@ -63,10 +121,10 @@ export function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function logout(): void {
-  if (typeof window === "undefined") return;
+export async function logout(): Promise<void> {
+  writeCache(null);
   try {
-    window.localStorage.removeItem(AUTH_KEY);
+    await supabase.auth.signOut();
   } catch {
     /* ignore */
   }
