@@ -41,7 +41,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
-import { getModule, scenarios, trainingModules } from "@/lib/uw-data";
+import { getModule, scenarios } from "@/lib/uw-data";
+import { usePartnerData } from "@/lib/use-partner-data";
 import { fireConfetti } from "@/lib/confetti";
 import { toast } from "sonner";
 import { RequireAuth } from "@/components/uw/RequireAuth";
@@ -116,7 +117,8 @@ const TRANSCRIPT = [
 function ModuleDetail() {
   const { moduleId } = Route.useParams();
   const navigate = useNavigate();
-  const mod = getModule(moduleId);
+  const { modules, completeModule } = usePartnerData();
+  const mod = modules.find((m) => m.id === moduleId) ?? getModule(moduleId);
   const [tab, setTab] = useState("overview");
   const [showSticky, setShowSticky] = useState(false);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
@@ -149,13 +151,14 @@ function ModuleDetail() {
   }
 
   const Icon = MODULE_ICONS[mod.id] ?? BookOpen;
-  const prevModule = trainingModules.find((m) => m.number === mod.number - 1);
-  const nextModule = trainingModules.find((m) => m.number === mod.number + 1);
+  const prevModule = modules.find((m) => m.number === mod.number - 1);
+  const nextModule = modules.find((m) => m.number === mod.number + 1);
   const isCompleted = mod.status === "completed";
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     fireConfetti();
     toast.success("Module completed! 🎉");
+    await completeModule(mod.id);
     window.setTimeout(() => navigate({ to: "/training" }), 2000);
   };
 

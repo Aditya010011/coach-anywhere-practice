@@ -49,7 +49,8 @@ import { useMicAnalyser } from "@/hooks/use-mic-analyser";
 import { useVapi } from "@/hooks/use-vapi";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fireConfetti } from "@/lib/confetti";
-import { scenarios, practiceSessions } from "@/lib/uw-data";
+import { scenarios } from "@/lib/uw-data";
+import { usePartnerData } from "@/lib/use-partner-data";
 import { cn } from "@/lib/utils";
 import { RequireAuth } from "@/components/uw/RequireAuth";
 
@@ -222,6 +223,7 @@ function Trainer() {
   });
   const searchRef = useRef<HTMLInputElement | null>(null);
   const isMobile = useIsMobile();
+  const { saveSession } = usePartnerData();
 
   // Pre-session config
   const [scenario, setScenario] = useState("objections");
@@ -399,6 +401,14 @@ function Trainer() {
   const endSession = useCallback(() => {
     if (useRealVoiceAi) vapi.stop();
     lastMetrics.current = computeSessionMetrics(messages, seconds);
+    if (seconds > 0 && messages.length > 0) {
+      void saveSession({
+        scenario,
+        durationSeconds: seconds,
+        transcript: messages,
+        rating: undefined,
+      });
+    }
     setActive(false);
     setPaused(false);
     setSeconds(0);
@@ -407,7 +417,7 @@ function Trainer() {
     setGoalCelebrated(false);
     setSummaryOpen(true);
     syncedVapiCount.current = 0;
-  }, [messages, seconds, useRealVoiceAi, vapi]);
+  }, [messages, seconds, scenario, saveSession, useRealVoiceAi, vapi]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1045,6 +1055,7 @@ function Trainer() {
 function HistorySheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [filter, setFilter] = useState<"7" | "30" | "all">("all");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const { sessions: practiceSessions } = usePartnerData();
 
   const filtered = practiceSessions.filter((s) => {
     if (filter === "7") return s.daysAgo <= 7;
@@ -1135,17 +1146,7 @@ function HistorySheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
                         >
                           {m.who === "you" ? "You" : "AI Coach"} · {m.at}
                         </p>
-                        <p
-                          className={
-                            m.tone === "good"
-                              ? "mt-0.5 rounded-md bg-success/20 px-1.5 py-0.5 text-sm text-success-foreground"
-                              : m.tone === "improve"
-                                ? "mt-0.5 rounded-md bg-warning/25 px-1.5 py-0.5 text-sm"
-                                : "mt-0.5 text-sm"
-                          }
-                        >
-                          {m.text}
-                        </p>
+                        <p className="mt-0.5 text-sm">{m.text}</p>
                       </div>
                     ))}
                     <div className="flex gap-2 pt-2">

@@ -4,7 +4,7 @@ import { ChevronDown, Star } from "lucide-react";
 
 import { AppHeader } from "@/components/uw/AppHeader";
 import { Badge } from "@/components/ui/badge";
-import { practiceSessions } from "@/lib/uw-data";
+import { usePartnerData } from "@/lib/use-partner-data";
 import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/sessions")({
@@ -45,6 +45,7 @@ function Rating({ value }: { value: number }) {
 
 function SessionsPage() {
   const [openId, setOpenId] = useState<string | null>(null);
+  const { loading, sessions } = usePartnerData();
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,11 +53,19 @@ function SessionsPage() {
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Session History</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {practiceSessions.length} practice sessions. Expand any session to read the transcript.
+          {loading
+            ? "Loading…"
+            : `${sessions.length} practice sessions. Expand any session to read the transcript.`}
         </p>
 
+        {!loading && sessions.length === 0 && (
+          <p className="mt-6 rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            No sessions yet. Start a practice session with your AI coach to see it here.
+          </p>
+        )}
+
         <ul className="mt-6 space-y-3">
-          {practiceSessions.map((s) => {
+          {sessions.map((s) => {
             const open = openId === s.id;
             return (
               <li key={s.id} className="rounded-2xl border border-border bg-card">
@@ -103,8 +112,6 @@ function SessionsPage() {
                               {line.who === "you" ? "You" : "AI Coach"} • {line.at}
                             </p>
                             <p className="mt-0.5">{line.text}</p>
-                            {line.tone === "good" && <p className="mt-1 text-[10px] font-semibold">✓ Great moment</p>}
-                            {line.tone === "improve" && <p className="mt-1 text-[10px] font-semibold">💡 Could improve</p>}
                           </div>
                         </li>
                       ))}

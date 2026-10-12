@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppHeader } from "@/components/uw/AppHeader";
-import { badges } from "@/lib/uw-data";
+import { usePartnerData } from "@/lib/use-partner-data";
 import { Progress } from "@/components/ui/progress";
 import { RequireAuth } from "@/components/uw/RequireAuth";
 
@@ -27,9 +27,10 @@ export const Route = createFileRoute("/badges")({
 });
 
 function BadgesPage() {
+  const { badges } = usePartnerData();
   const earned = badges.filter((b) => b.earned);
   const locked = badges.filter((b) => !b.earned);
-  const pct = Math.round((earned.length / badges.length) * 100);
+  const pct = badges.length ? Math.round((earned.length / badges.length) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-background">

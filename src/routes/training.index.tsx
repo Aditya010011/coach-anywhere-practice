@@ -23,7 +23,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { trainingModules, type ModuleStatus } from "@/lib/uw-data";
+import type { TrainingModule, ModuleStatus } from "@/lib/uw-data";
+import { usePartnerData } from "@/lib/use-partner-data";
 import { RequireAuth } from "@/components/uw/RequireAuth";
 import { AppHeader } from "@/components/uw/AppHeader";
 
@@ -65,33 +66,31 @@ function statusToFilter(status: ModuleStatus): Filter {
 }
 
 function TrainingIndex() {
-  const [loading, setLoading] = useState(true);
+  const { loading, modules, stats } = usePartnerData();
   const [filter, setFilter] = useState<Filter>("all");
   const [progress, setProgress] = useState(0);
 
+  const targetProgress = modules.length
+    ? Math.round((stats.modulesCompleted / modules.length) * 100)
+    : 0;
   useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 500);
+    const t = window.setTimeout(() => setProgress(targetProgress), 100);
     return () => window.clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setProgress(50), 100);
-    return () => window.clearTimeout(t);
-  }, []);
+  }, [targetProgress]);
 
   const counts = useMemo(() => {
-    const completed = trainingModules.filter((m) => m.status === "completed").length;
-    const inProgress = trainingModules.filter((m) => m.status === "unlocked").length;
-    const locked = trainingModules.filter((m) => m.status === "locked").length;
+    const completed = modules.filter((m) => m.status === "completed").length;
+    const inProgress = modules.filter((m) => m.status === "unlocked").length;
+    const locked = modules.filter((m) => m.status === "locked").length;
     return { completed, inProgress, locked };
-  }, []);
+  }, [modules]);
 
-  const allComplete = counts.completed === trainingModules.length;
+  const allComplete = modules.length > 0 && counts.completed === modules.length;
 
   const filtered = useMemo(() => {
-    if (filter === "all") return trainingModules;
-    return trainingModules.filter((m) => statusToFilter(m.status) === filter);
-  }, [filter]);
+    if (filter === "all") return modules;
+    return modules.filter((m) => statusToFilter(m.status) === filter);
+  }, [filter, modules]);
 
   const tabs: { key: Filter; label: string }[] = [
     { key: "all", label: "All" },
@@ -264,7 +263,7 @@ function CelebrationState() {
   );
 }
 
-function ModuleCard({ module: m }: { module: (typeof trainingModules)[number] }) {
+function ModuleCard({ module: m }: { module: TrainingModule }) {
   const Icon = MODULE_ICONS[m.id] ?? BookOpen;
 
   if (m.status === "completed") {

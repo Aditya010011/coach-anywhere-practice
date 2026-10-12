@@ -32,7 +32,7 @@ import { AppHeader } from "@/components/uw/AppHeader";
 import { OnboardingTour, useOnboardingTour } from "@/components/uw/OnboardingTour";
 import { RequireAuth } from "@/components/uw/RequireAuth";
 import { getSession, getDisplayName } from "@/lib/auth";
-import { recentActivity, badges } from "@/lib/uw-data";
+import { usePartnerData } from "@/lib/use-partner-data";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -56,18 +56,6 @@ export const Route = createFileRoute("/dashboard")({
     </RequireAuth>
   ),
 });
-
-const PROGRESS = 50;
-
-// TODO: Replace with Supabase query — number of completed AI sessions
-const AI_SESSIONS_COUNT: number = 7;
-
-const stats = [
-  { icon: Check, label: "Modules completed", value: "2 / 4" },
-  { icon: Mic, label: "AI sessions", value: "7 total" },
-  { icon: Clock, label: "Practice time", value: "45 minutes" },
-  { icon: Target, label: "Next milestone", value: "Module 3" },
-];
 
 const milestones = [
   { day: "Day 1", label: "Signed up & completed Module 1", state: "done" },
@@ -103,12 +91,26 @@ function Dashboard() {
   const continueBtnRef = useRef<HTMLDivElement>(null);
 
   const { enabled: tourEnabled, dismiss } = useOnboardingTour();
+  const { loading, modules, stats, recentActivity, badges, sessions } = usePartnerData();
   const [selectedBadge, setSelectedBadge] = useState<(typeof badges)[number] | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
 
   const displayName = getDisplayName(getSession());
   const firstName = displayName.split(" ")[0];
+
+  const PROGRESS = stats.totalModules
+    ? Math.round((stats.modulesCompleted / stats.totalModules) * 100)
+    : 0;
+  const AI_SESSIONS_COUNT = stats.aiSessionsCount;
+  const lastSession = sessions[0];
+  const upcomingLocked = modules.find((m) => m.status === "locked");
+  const statCards = [
+    { icon: Check, label: "Modules completed", value: `${stats.modulesCompleted} / ${stats.totalModules}` },
+    { icon: Mic, label: "AI sessions", value: `${stats.aiSessionsCount} total` },
+    { icon: Clock, label: "Practice time", value: `${stats.practiceMinutes} minutes` },
+    { icon: Target, label: "Next milestone", value: stats.nextModule?.shortTitle ?? "All done 🎉" },
+  ];
 
   const [chatLog, setChatLog] = useState<string[]>([
     `Hi ${firstName}! I'm your support assistant — how can I help today?`,
@@ -220,11 +222,11 @@ function Dashboard() {
               <ProgressRing value={PROGRESS} />
             </div>
             <p className="mt-3 text-center text-sm text-muted-foreground">
-              2 of 4 modules complete
+              {stats.modulesCompleted} of {stats.totalModules} modules complete
             </p>
 
             <dl className="mt-6 space-y-3">
-              {stats.map(({ icon: Icon, label, value }) => (
+              {statCards.map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-center gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground">
                     <Icon className="size-4" aria-hidden="true" />
@@ -249,57 +251,66 @@ function Dashboard() {
             What's next
           </h2>
 
-          <article ref={nextModuleRef} className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:shadow-lift">
-            <div className="flex items-start gap-4">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-brand text-primary-foreground">
-                <PiggyBank className="size-6" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <Badge className="rounded-full border-0 bg-success/15 text-success hover:bg-success/15">
-                  <Check className="size-3" aria-hidden="true" />
-                  Unlocked
-                </Badge>
-                <h3 className="mt-2 text-lg font-semibold">Module 3: Bill Savings & Social Proof</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Learn how to show real customer savings and overcome price objections.
-                </p>
-                <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Play className="size-3.5" aria-hidden="true" /> 15 min video
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Mic className="size-3.5" aria-hidden="true" /> 5 min practice
-                  </span>
-                </p>
-                <Button asChild className="mt-5 min-h-11 rounded-xl">
-                  <Link to="/trainer">Start module</Link>
-                </Button>
+          {stats.nextModule ? (
+            <article ref={nextModuleRef} className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all duration-200 hover:-translate-y-1 hover:shadow-lift">
+              <div className="flex items-start gap-4">
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-brand text-primary-foreground">
+                  <PiggyBank className="size-6" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <Badge className="rounded-full border-0 bg-success/15 text-success hover:bg-success/15">
+                    <Check className="size-3" aria-hidden="true" />
+                    Unlocked
+                  </Badge>
+                  <h3 className="mt-2 text-lg font-semibold">{stats.nextModule.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {stats.nextModule.description}
+                  </p>
+                  <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Play className="size-3.5" aria-hidden="true" /> {stats.nextModule.meta}
+                    </span>
+                  </p>
+                  <Button asChild className="mt-5 min-h-11 rounded-xl">
+                    <Link to="/training/$moduleId" params={{ moduleId: stats.nextModule.id }}>
+                      Start module
+                    </Link>
+                  </Button>
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+          ) : (
+            <article ref={nextModuleRef} className="rounded-2xl border border-border bg-gradient-night p-6 text-center text-primary-foreground shadow-card">
+              <p className="text-sm font-semibold">All modules complete 🎉</p>
+            </article>
+          )}
 
-          <article className="rounded-2xl border border-border bg-muted/50 p-6">
-            <div className="flex items-start gap-4">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-muted text-locked">
-                <Handshake className="size-6" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <Badge variant="secondary" className="rounded-full text-muted-foreground">
-                  <Lock className="size-3" aria-hidden="true" />
-                  Locked
-                </Badge>
-                <h3 className="mt-2 text-lg font-semibold text-muted-foreground">
-                  Module 4: Your First Customer
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Complete Module 3 to unlock this step-by-step customer conversation guide.
-                </p>
-                <Button disabled className="mt-5 min-h-11 rounded-xl">
-                  Complete Module 3
-                </Button>
+          {upcomingLocked && (
+            <article className="rounded-2xl border border-border bg-muted/50 p-6">
+              <div className="flex items-start gap-4">
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-muted text-locked">
+                  <Handshake className="size-6" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <Badge variant="secondary" className="rounded-full text-muted-foreground">
+                    <Lock className="size-3" aria-hidden="true" />
+                    Locked
+                  </Badge>
+                  <h3 className="mt-2 text-lg font-semibold text-muted-foreground">
+                    {upcomingLocked.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {upcomingLocked.prerequisite
+                      ? `Complete ${upcomingLocked.prerequisite.title} to unlock.`
+                      : "Complete the previous module to unlock."}
+                  </p>
+                  <Button disabled className="mt-5 min-h-11 rounded-xl">
+                    Locked
+                  </Button>
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+          )}
 
           <article ref={aiCardRef} className="relative overflow-hidden rounded-2xl bg-gradient-night p-6 shadow-card">
             {AI_SESSIONS_COUNT === 0 ? (
@@ -329,7 +340,7 @@ function Dashboard() {
                   Feeling stuck? Ask your coach anything about UW services, objections or openers.
                 </p>
                 <p className="mt-3 font-mono text-xs text-primary-foreground/60">
-                  Last session: 2 hours ago · 8 min
+                  {lastSession ? `Last session: ${lastSession.date} · ${lastSession.duration}` : "No sessions yet"}
                 </p>
                 <Button
                   asChild
