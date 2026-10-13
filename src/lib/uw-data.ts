@@ -1,5 +1,7 @@
-// Mock data for the UW Partner Coach frontend.
-// TODO: Replace with Supabase queries when the backend is enabled.
+// Static content catalog for the UW Partner Coach frontend: module copy,
+// badge definitions, scenario labels, and admin-dashboard sample data.
+// Per-user state (module progress, sessions, earned badges) is loaded live
+// from Supabase via `usePartnerData()` — see src/lib/use-partner-data.ts.
 
 export type ModuleStatus = "completed" | "unlocked" | "locked";
 
@@ -16,6 +18,9 @@ export type TrainingModule = {
   prerequisite?: { id: string; title: string };
 };
 
+// `status`/`completedOn` below are placeholder defaults only — real values
+// come from the `module_progress` table and overwrite these in
+// `usePartnerData()`. They're only used as a fallback before that data loads.
 export const trainingModules: TrainingModule[] = [
   {
     id: "1",
@@ -23,9 +28,8 @@ export const trainingModules: TrainingModule[] = [
     title: "Module 1: Your UW Story",
     shortTitle: "Your UW Story",
     description: "Craft the personal story that opens every customer conversation.",
-    status: "completed",
+    status: "unlocked",
     meta: "📹 12 min video • 🎙️ 5 min practice",
-    completedOn: "Completed Jan 12, 2026",
     learn: [
       "Introduce yourself without sounding scripted",
       "Explain why you joined UW in under 30 seconds",
@@ -40,9 +44,8 @@ export const trainingModules: TrainingModule[] = [
     title: "Module 2: Commission & Earnings",
     shortTitle: "Commission & Earnings",
     description: "Understand how you get paid — and how to talk about it compliantly.",
-    status: "completed",
+    status: "locked",
     meta: "📹 18 min video • 🎙️ 5 min practice",
-    completedOn: "Completed Jan 15, 2026",
     learn: [
       "Read your commission statement with confidence",
       "Explain the earnings model without income promises",
@@ -59,7 +62,7 @@ export const trainingModules: TrainingModule[] = [
     shortTitle: "Bill Savings & Social Proof",
     description:
       "Show customers where their money goes today, build a like-for-like comparison and use real stories to build trust — without ever promising a number you cannot prove.",
-    status: "unlocked",
+    status: "locked",
     meta: "📹 15 min video • 🎙️ 5 min practice",
     learn: [
       "Calculate real customer savings using the UW bundle discount",
@@ -94,68 +97,16 @@ export function getModule(id: string) {
   return trainingModules.find((m) => m.id === id);
 }
 
-export const recentActivity = [
-  { id: 1, when: "2 hours ago", text: "Completed 8-min AI practice (Objection handling)" },
-  { id: 2, when: "Yesterday at 3:42 PM", text: "Finished Module 2 ✓" },
-  { id: 3, when: "2 days ago", text: "Practised first customer call (12 min)" },
-  { id: 4, when: "3 days ago", text: "Unlocked Module 2" },
-  { id: 5, when: "4 days ago", text: "Earned ‘Early Bird’ badge 🏆" },
-];
-
+// Badge catalog: static definitions (emoji/title/how-to-earn). The `earned`
+// field here is always a placeholder — real earned state and dates come from
+// the `user_badges` table and are computed in `usePartnerData()`.
 export const badges = [
-  { id: "early-bird", emoji: "🏆", title: "Early Bird", how: "Complete Module 1 in 24 hours", earned: "Jan 12, 2026" },
-  { id: "speed", emoji: "⚡", title: "Speed Learner", how: "Finish 2 modules in 1 week", earned: "Jan 15, 2026" },
+  { id: "early-bird", emoji: "🏆", title: "Early Bird", how: "Complete Module 1 in 24 hours", earned: null },
+  { id: "speed", emoji: "⚡", title: "Speed Learner", how: "Finish 2 modules in 1 week", earned: null },
   { id: "convo", emoji: "🎙️", title: "Conversationalist", how: "Complete 10+ AI sessions", earned: null },
   { id: "dedicated", emoji: "📚", title: "Dedicated", how: "Practise 5 days in a row", earned: null },
   { id: "first-customer", emoji: "🌟", title: "First Customer", how: "Sign your first customer", earned: null },
   { id: "on-fire", emoji: "🔥", title: "On Fire", how: "Keep a 7-day practice streak", earned: null },
-];
-
-export const practiceSessions = [
-  {
-    id: "s1",
-    date: "Jan 15, 2026 at 2:30 PM",
-    daysAgo: 1,
-    duration: "8 minutes",
-    scenario: "Customer objections",
-    icon: "💬",
-    rating: 4,
-    topics: ["Objection handling", "Bundle savings"],
-    transcript: [
-      { who: "ai", at: "00:00", text: "Hi Sarah! I'm a busy neighbour — go ahead.", tone: "" },
-      { who: "you", at: "00:30", text: "Who do you pay for broadband at the moment?", tone: "good" },
-      { who: "ai", at: "01:00", text: "Honestly, switching feels like a hassle.", tone: "" },
-      { who: "you", at: "01:30", text: "It takes ten minutes and I handle the rest.", tone: "improve" },
-    ],
-  },
-  {
-    id: "s2",
-    date: "Jan 13, 2026 at 9:05 AM",
-    daysAgo: 3,
-    duration: "12 minutes",
-    scenario: "First customer call",
-    icon: "📞",
-    rating: 3,
-    topics: ["Rapport", "Discovery"],
-    transcript: [
-      { who: "ai", at: "00:00", text: "Hello? Who's this?", tone: "" },
-      { who: "you", at: "00:30", text: "Hi Tom, it's Sarah — we met at the school fair.", tone: "good" },
-    ],
-  },
-  {
-    id: "s3",
-    date: "Dec 20, 2025 at 6:12 PM",
-    daysAgo: 40,
-    duration: "6 minutes",
-    scenario: "Product Q&A",
-    icon: "❓",
-    rating: 5,
-    topics: ["Broadband", "Mobile"],
-    transcript: [
-      { who: "ai", at: "00:00", text: "Does the broadband come with a router?", tone: "" },
-      { who: "you", at: "00:30", text: "Yes — and installation is handled for you.", tone: "good" },
-    ],
-  },
 ];
 
 export const scenarios = [
