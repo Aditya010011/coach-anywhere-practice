@@ -42,13 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  adminPartners,
-  moduleCompletionStats,
-  weeklySignups,
-  type AdminPartner,
-  type PartnerStatus,
-} from "@/lib/uw-data";
+import { useAdminData, type AdminPartner, type PartnerStatus } from "@/lib/use-admin-data";
 import { RequireAuth } from "@/components/uw/RequireAuth";
 
 export const Route = createFileRoute("/admin")({
@@ -101,21 +95,22 @@ function exportCsv(rows: AdminPartner[]) {
 }
 
 function AdminPage() {
+  const { loading, isAdmin, partners, moduleCompletionStats, weeklySignups } = useAdminData();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | PartnerStatus>("all");
   const [sortKey, setSortKey] = useState<SortKey>("lastActive" as never);
   const [sortAsc, setSortAsc] = useState(false);
 
   const stats = useMemo(() => {
-    const total = adminPartners.length;
-    const active = adminPartners.filter((p) => !p.lastActive.includes("day")).length;
-    const avgModules = adminPartners.reduce((s, p) => s + p.modulesDone, 0) / total;
-    const totalSessions = adminPartners.reduce((s, p) => s + p.aiSessions, 0);
+    const total = partners.length;
+    const active = partners.filter((p) => !p.lastActive.includes("day") && p.lastActive !== "Never").length;
+    const avgModules = total ? partners.reduce((s, p) => s + p.modulesDone, 0) / total : 0;
+    const totalSessions = partners.reduce((s, p) => s + p.aiSessions, 0);
     return { total, active, avgModules: avgModules.toFixed(1), totalSessions };
-  }, []);
+  }, [partners]);
 
   const rows = useMemo(() => {
-    let list = adminPartners.filter(
+    let list = partners.filter(
       (p) =>
         (statusFilter === "all" || p.status === statusFilter) &&
         (p.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -130,7 +125,7 @@ function AdminPage() {
       });
     }
     return list;
-  }, [query, statusFilter, sortKey, sortAsc]);
+  }, [partners, query, statusFilter, sortKey, sortAsc]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc((v) => !v);
@@ -139,6 +134,34 @@ function AdminPage() {
       setSortAsc(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <main className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-muted-foreground">
+          Loading partner data…
+        </main>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <main className="mx-auto max-w-xl px-4 py-16 text-center">
+          <h1 className="text-2xl font-bold text-foreground">Access restricted</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This page is only available to team admins. Ask an existing admin to grant your account access.
+          </p>
+          <Link to="/dashboard" className="mt-6 inline-block text-sm underline underline-offset-4 hover:text-foreground">
+            ← Back to my dashboard
+          </Link>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -149,7 +172,7 @@ function AdminPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Team admin</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Partner Management</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Onboarding progress across your partner team. Demo data — connects to live data with Lovable Cloud.
+              Real-time onboarding progress across your partner team.
             </p>
           </div>
           <Button onClick={() => exportCsv(rows)} className="min-h-11 rounded-xl">

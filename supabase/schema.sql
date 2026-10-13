@@ -86,3 +86,34 @@ alter table public.user_badges enable row level security;
 
 create policy "Users manage their own badges" on public.user_badges
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- 5. Admin role support: lets a flagged user read (not write) everyone's data
+-- for the /admin dashboard, without weakening the per-user policies above.
+alter table public.profiles add column if not exists is_admin boolean not null default false;
+
+-- security definer + fixed search_path so this can be called from RLS
+-- policies without recursively re-checking RLS on profiles.
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce((select is_admin from public.profiles where id = auth.uid()), false);
+$$;
+
+create policy "Admins can view all profiles" on public.profiles
+  for select using (public.is_admin());
+
+create policy "Admins can view all module progress" on public.module_progress
+  for select using (public.is_admin());
+
+create policy "Admins can view all practice sessions" on public.practice_sessions
+  for select using (public.is_admin());
+
+create policy "Admins can view all badges" on public.user_badges
+  for select using (public.is_admin());
+
+-- To grant someone admin access, run in the SQL editor:
+--   update public.profiles set is_admin = true where email = 'someone@example.com';
