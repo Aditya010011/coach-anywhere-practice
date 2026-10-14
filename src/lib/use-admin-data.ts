@@ -38,6 +38,31 @@ function relativeTime(date: Date | null, now: Date): string {
   return `${days} days ago`;
 }
 
+/**
+ * Lightweight check for whether the signed-in user is an admin, without
+ * loading the full cross-partner dataset. Used to conditionally show an
+ * "Admin" nav link in the shared header.
+ */
+export function useIsAdmin(): boolean {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) return;
+      const { data: me } = await supabase.from("profiles").select("is_admin").eq("id", uid).maybeSingle();
+      if (!cancelled) setIsAdmin(!!me?.is_admin);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return isAdmin;
+}
+
 export function useAdminData() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UwLogo } from "@/components/uw/SiteHeader";
 import { getSession, getDisplayName, getInitials, logout } from "@/lib/auth";
+import { useIsAdmin } from "@/lib/use-admin-data";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Dashboard" },
@@ -32,6 +33,7 @@ export function AppHeader() {
   const displayName = getDisplayName(session);
   const firstName = displayName.split(" ")[0];
   const initials = getInitials(displayName);
+  const isAdmin = useIsAdmin();
 
   async function handleLogout() {
     await logout();
@@ -54,6 +56,14 @@ export function AppHeader() {
               {link.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="text-sm text-muted-foreground hover:text-foreground [&.active]:font-semibold [&.active]:text-foreground"
+            >
+              Admin
+            </Link>
+          )}
         </nav>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" aria-label="Notifications" className="min-h-11 min-w-11">
